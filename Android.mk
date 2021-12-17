@@ -38,6 +38,5 @@ endif
 LOCAL_VENDOR_MODULE := true
 include $(BUILD_SHARED_LIBRARY)
 
-# Build test c_mode
-include $(LOCAL_PATH)/test/c_mode/Android.mk
-
+# Build test app
+include $(LOCAL_PATH)/test/Android.mk
