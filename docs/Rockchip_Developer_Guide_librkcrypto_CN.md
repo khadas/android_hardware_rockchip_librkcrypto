@@ -20,7 +20,7 @@
 
 本文档可能提及的其他所有注册商标或商标，由其各自拥有者所有。
 
-**版权所有© 2018瑞芯微电子股份有限公司**
+**版权所有© 2021瑞芯微电子股份有限公司**
 
 超越合理使用范畴，非经本公司书面许可，任何单位和个人不得擅自摘抄、复制本文档内容的部分或全部，并不得以任何形式传播。
 
@@ -58,9 +58,10 @@ Fuzhou Rockchip Electronics Co., Ltd.
 
 **修订记录**
 
-|    日期    | 版本  |  作者  |                    修改说明                    |
-| :--------: | :---: | :----: | :--------------------------------------------: |
-| 2021-12-15 | V0.03 | 王小滨 |                    draft                    |
+|    日期    | 版本  |  作者  | 修改说明                                                     |
+| :--------: | :---: | :----: | :----------------------------------------------------------- |
+| 2021-12-15 | V0.03 | 王小滨 | draft                                                        |
+| 2021-12-29 | V0.04 | 林金寒 | 1.修改memory相关定义<br />2.删除rk_hash_ctx，使用handle形式<br />3.修改hash相关接口<br />4.修改cipher相关接口 |
 ------
 [TOC]
 
@@ -75,21 +76,23 @@ Fuzhou Rockchip Electronics Co., Ltd.
 ## 注意事项
 
 * 对称算法的输入数据长度，要求与所选算法的block对齐
-* 为了提高效率，建议选用通过物理地址传递数据的算法接口 TODO:待补充
+* 为了提高效率，建议选用通过dma_fd传递数据的算法接口
 
 ## 数据结构
 
-### rk_cipher_memory
+### rk_crypto_mem
 
 ```c
 typedef struct {
-	uint64_t	phys_addr;
-	uint64_t	virt_addr;
-} rk_cipher_memory;
+    void		*vaddr;
+    int			dma_fd;
+    size_t		size;
+} rk_crypto_mem;
 ```
 
-* phys_addr - 物理地址
-* virt_addr - 与phys_addr对应的虚拟地址
+* vaddr - memory的虚拟地址
+* dma_fd - memory对应的dma fd句柄
+* size  - memory区域的大小
 
 ### rk_cipher_config
 
@@ -107,7 +110,7 @@ typedef struct {
 
 * algo - 算法类型，见[RK_CRYPTO_ALGO](#RK_CRYPTO_ALGO)，实际取值范围以API的描述为准，下同
 * mode - 算法模式，见[RK_CIPIHER_MODE](#RK_CIPIHER_MODE), 支持ECB/CBC/CTS/CTR/CFB/OFB/XTS
-* operation - 加解密模式见[Algorithm operation](#AlgorithmOperation)
+* operation - 加解密模式见[RK_OPERATION](#RK_OPERATION)
 * key - 密钥明文，当使用keyladder操作时无效
 * key_len - key的Byte长度
 * iv - 初始向量，当ECB模式时无效
@@ -133,7 +136,7 @@ typedef struct {
 
 * algo - 算法类型，见[RK_CRYPTO_ALGO](#RK_CRYPTO_ALGO)，支持AES/SM4
 * mode - 算法模式，见[RK_CIPIHER_MODE](#RK_CIPIHER_MODE), 支持GCM/CCM
-* operation - 加解密模式见[Algorithm operation](#AlgorithmOperation)
+* operation - 加解密模式见[RK_OPERATION](#RK_OPERATION)
 * key - 密钥明文，当使用keyladder操作时无效
 * key_len - key的Byte长度
 * iv - 初始向量
@@ -153,29 +156,9 @@ typedef struct {
 } rk_hash_config;
 ```
 
-* algo - hash算法类型
-* key - hash-mac密钥，非hash-mac算法时无效
+* algo - 算法类型，见[RK_CRYPTO_ALGO](#RK_CRYPTO_ALGO)，支持HASH/HMAC等多种算法
+* key - hash-mac密钥，只有当algo为HMAC类型的算法才有效
 * key_len - key的Byte长度
-
-### rk_hash_ctx
-
-```c
-typedef struct{
-	const uint8_t *null_hash;
-	uint32_t magic;
-	uint32_t algo;
-	uint32_t digest_size;
-	uint32_t dma_started;
-	uint32_t data_lli_head;
-}rk_hash_ctx;
-```
-
-* null_hash - when hash is null or length is zero ,used this as result
-* magic - to check whether the ctx is correct
-* algo - hash algo
-* digest_size - hash out length according to hash algo
-* dma_started - choose use start or restart
-* data_lli_heda - to recored the lli that not computed
 
 ## 常量
 
@@ -184,11 +167,32 @@ typedef struct{
 ```c
 /* Crypto algorithm */
 enum RK_CRYPTO_ALGO {
-	RK_ALGO_AES = 1,
+	RK_ALGO_CIPHER_TOP = 0x00,
+	RK_ALGO_AES,
 	RK_ALGO_DES,
 	RK_ALGO_TDES,
 	RK_ALGO_SM4,
-	RK_ALGO_ALGO_MAX
+	RK_ALGO_CIPHER_BUTT,
+
+	RK_ALGO_HASH_TOP = 0x10,
+	RK_ALGO_MD5,
+	RK_ALGO_SHA1,
+	RK_ALGO_SHA256,
+	RK_ALGO_SHA224,
+	RK_ALGO_SHA512,
+	RK_ALGO_SHA384,
+	RK_ALGO_SHA512_224,
+	RK_ALGO_SHA512_256,
+	RK_ALGO_SM3,
+	RK_ALGO_HASH_BUTT,
+
+	RK_ALGO_HMAC_TOP = 0x20,
+	RK_ALGO_HMAC_MD5,
+	RK_ALGO_HMAC_SHA1,
+	RK_ALGO_HMAC_SHA256,
+	RK_ALGO_HMAC_SHA512,
+	RK_ALGO_HMAC_SM3,
+	RK_ALGO_HMAC_BUTT,
 };
 ```
 
@@ -197,18 +201,19 @@ enum RK_CRYPTO_ALGO {
 ```c
 /* Crypto mode */
 enum RK_CIPIHER_MODE {
-	RK_CIPHER_MODE_ECB = 0,
-	RK_CIPHER_MODE_CBC = 1,
-	RK_CIPHER_MODE_CTS = 2,
-	RK_CIPHER_MODE_CTR = 3,
-	RK_CIPHER_MODE_CFB = 4,
-	RK_CIPHER_MODE_OFB = 5,
-	RK_CIPHER_MODE_XTS = 6,
-	RK_CIPHER_MODE_CCM = 7,
-	RK_CIPHER_MODE_GCM = 8,
-	RK_CIPHER_MODE_CMAC = 9,
-	RK_CIPHER_MODE_CBC_MAC = 10,
-	RK_CIPHER_MODE_MAX
+	RK_CIPHER_MODE_TOP = 0x00,
+	RK_CIPHER_MODE_ECB,
+	RK_CIPHER_MODE_CBC,
+	RK_CIPHER_MODE_CTS,
+	RK_CIPHER_MODE_CTR,
+	RK_CIPHER_MODE_CFB,
+	RK_CIPHER_MODE_OFB,
+	RK_CIPHER_MODE_XTS,
+	RK_CIPHER_MODE_CCM,
+	RK_CIPHER_MODE_GCM,
+	RK_CIPHER_MODE_CMAC,
+	RK_CIPHER_MODE_CBC_MAC,
+	RK_CIPHER_MODE_BUTT
 };
 ```
 
@@ -218,19 +223,19 @@ enum RK_CIPIHER_MODE {
 /* Hardware readable keys, handle by keyladder */
 enum RK_OEM_HR_OTP_KEYID {
 	RK_OEM_HR_OTP_KEY0 = 0,		/* keyladder key0 */
-	RK_OEM_HR_OTP_KEY1 = 1,		/* keyladder key1 */
-	RK_OEM_HR_OTP_KEY2 = 2,		/* keyladder key2 */
-	RK_OEM_HR_OTP_KEY3 = 3,		/* keyladder key3 */
+	RK_OEM_HR_OTP_KEY1,			/* keyladder key1 */
+	RK_OEM_HR_OTP_KEY2,			/* keyladder key2 */
+	RK_OEM_HR_OTP_KEY3,			/* keyladder key3 */
 	RK_OEM_HR_OTP_KEYMAX
 };
 ```
 
-### AlgorithmOperation
+### RK_OPERATION
 
 ```c
 /* Algorithm operation */
-#define RK_MODE_ENCRYPT			1
-#define RK_MODE_DECRYPT			0
+#define RK_OP_CIPHER_ENC		1
+#define RK_OP_CIPHER_DEC		0
 ```
 
 ### 其他常量
@@ -261,6 +266,7 @@ enum RK_OEM_HR_OTP_KEYID {
 
 ```c
 typedef uint32_t RK_RES;
+typedef uint32_t rk_handle;
 ```
 
 ### 返回值
@@ -275,30 +281,31 @@ typedef uint32_t RK_RES;
 #define RK_ALG_ERR_OUT_OF_MEMORY	0xF0000004
 ```
 
-### rk_crypto_malloc
+### rk_crypto_mem_alloc
 
 ```c
-RK_RES rk_crypto_malloc(uint32_t size， rk_cipher_memory *memory);
+rk_crypto_mem *rk_crypto_mem_alloc(size_t size);
 ```
 
 **功能**
-申请一块内存，返回内存的物理地址和虚拟地址。
+申请一块内存，返回rk_crypto_mem，包含内存的虚拟地址和dma_fd等信息。
 
 **参数**
-* [in] size - 待申请内存的大小
-* [out] memory - 返回的内存地址，见[rk_cipher_memory](#rk_cipher_memory)
+* [in] size - 待申请内存的大小，最大不能超过RK_CRYPTO_MAX_DATA_LEN（当前为1MByte）。
+* [out] memory - 返回的内存地址，见[rk_crypto_mem](#rk_crypto_mem)
 
-### rk_crypto_free
+### rk_crypto_mem_free
 
 ```c
-void rk_crypto_free(rk_cipher_memory *memory);
+void rk_crypto_mem_free(rk_crypto_mem *memory);
 ```
 
 **功能**
-释放通过`rk_crypto_malloc`申请的内存。
+释放通过`rk_crypto_mem_alloc`申请的内存。
 
 **参数**
-* [in] memory - 内存地址，见[rk_cipher_memory](#rk_cipher_memory)
+
+* [in] memory - 内存地址，见[rk_crypto_mem](#rk_crypto_mem)
 
 ### rk_crypto_init
 
@@ -312,10 +319,10 @@ crypto初始化，例如打开设备节点等。
 **参数**
 * 无
 
-### rk_crypto_destroy
+### rk_crypto_deinit
 
 ```c
-void rk_crypto_destroy(void);
+void rk_crypto_deinit(void);
 ```
 
 **功能**
@@ -327,66 +334,84 @@ void rk_crypto_destroy(void);
 ### rk_get_random
 
 ```c
-RK_RES rk_get_random(uint32_t len, uint8_t *data);
+RK_RES rk_get_random(uint8_t *data, uint32_t len);
 ```
 
 **功能**
 获取硬件随机数。
 
 **参数**
-* [in] len - 需获取的随机数Byte长度
 * [out] data - 返回的随机数buffer
+* [in] len - 需获取的随机数Byte长度
 
 ### rk_hash_init
 
 ```c
-RK_RES rk_hash_init(rk_hash_ctx *ctx, uint32_t algo);
+RK_RES rk_hash_init(rk_hash_config *config, rk_handle *handle);
 ```
 
 **功能**
-初始化hash算法，支持SHA256, SHA384, SHA512。
+初始化hash算法，支持MD5, SHA1, SHA224, SHA256, SHA384, SHA512。
 
 **参数**
 
-* [out] ctx - hash算法的context, 见[rk_hash_ctx](#rk_hash_ctx)
-* [in] algo - hash算法类型
+* [in] config - hash/hmac配置
+* [out] handle - hash/hmac句柄
 
 ### rk_hash_update
 
 ```c
-RK_RES rk_hash_update(rk_hash_ctx *ctx, uint8_t *data, uint32_t data_len);
+RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len, bool is_last);
 ```
 
 **功能**
 
-计算hash值，支持分组多次计算。
+接收dma_fd数据作为输入，计算hash/hmac值，支持分组多次计算。
 
 **参数**
 
-* [in] ctx - hash算法的context, 首次update的ctx经过`rk_hash_init`初始化
-* [in] data - 待计算hash的一组数据
-* [in] data_len - data的Byte长度
+* [in] handle- hash/hmac句柄, 必须经过`rk_hash_init`初始化
+* [in] data_fd - 待计算hash/hmac的一组数据的句柄
+* [in] data_len - data的Byte长度，必须64字节对齐，最后一个块无此限制。
+* [in] is_last - 当前是否是最后一个组数据
+
+### rk_hash_update_virt
+
+```c
+RK_RES rk_hash_update_virt(rk_handle handle, uint8_t *data, uint32_t data_len, bool is_last);
+```
+
+**功能**
+
+接收虚拟地址数据作为输入，计算hash值，支持分组多次计算。
+
+**参数**
+
+* [in] handle - hash/hmac句柄, 必须经过`rk_hash_init`初始化
+* [in] data - 待计算hash/hmac的一组数据
+* [in] data_len - data的Byte长度，必须64字节对齐，最后一个block无此限制。
+* [in] is_last - 当前是否是最后一个组数据
 
 ### rk_hash_final
 
 ```c
-RK_RES rk_hash_final(rk_hash_ctx *ctx, uint8_t *hash, uint8_t *hash_len);
+RK_RES rk_hash_final(rk_handle handle, uint8_t *hash, uint8_t *hash_len);
 ```
 
 **功能**
 
-获取hash值，在计算完所有的数据后，调用这个接口获取最终的hash值，并清除ctx。如果在计算过程中，需要中断计算，也必须调用该接口结束hash计算。
+获取hash/hmac值，在计算完所有的数据后，调用这个接口获取最终的hash/hmac值，并释放句柄。如果在计算过程中，需要中断计算，也必须调用该接口结束hash计算。
 
 **参数**
 
-* [in] ctx - hash算法的context
-* [out] hash - 输出的hash数据
-* [out] hash_len - hash数据的Byte长度
+* [in] handle- hash/hmac句柄, 必须经过`rk_hash_init`初始化
+* [out] hash - 输出的hash/hmac数据
+* [out] hash_len - hash/hmac数据的Byte长度
 
 ### rk_cipher_init
 
 ```c
-RK_RES rk_cipher_init(rk_cipher_config *config, uint32_t cipher_handle);
+RK_RES rk_cipher_init(rk_cipher_config *config, rk_handle *handle);
 ```
 
 **功能**
@@ -394,20 +419,38 @@ RK_RES rk_cipher_init(rk_cipher_config *config, uint32_t cipher_handle);
 
 **参数**
 * [in] config - 算法、模式、密钥、iv等，见[rk_cipher_config](#rk_cipher_config)
-* [out] cipher_handle - 输出的handle
+* [out] handle - cipher的handle
 
-### rk_cipher_update
+### rk_cipher_crypt
 
 ```c
-RK_RES rk_cipher_update(uint32_t cipher_handle, uint8_t *in, uint32_t in_len,
-                        uint8_t *out, uint32_t *out_len);
+RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
+                       int out_fd, uint32_t *out_len);
 ```
 
 **功能**
-对称分组算法，开始加解密。
+接收dma_fd数据使用对称分组算法执行加解密。
 
 **参数**
-* [in] cipher_handle - 输入的handle
+
+* [in] handle - cipher的handle，必须经过rk_cipher_init初始化。
+* [in] in - 输入数据buffer
+* [in] in_len - 输入数据的Byte长度
+* [out] out - 输出计算结果
+* [out] out_len - 计算结果的Byte长度
+
+### rk_cipher_crypt_virt
+
+```c
+RK_RES rk_cipher_crypt_virt(rk_handle handle, uint8_t *in, uint32_t in_len,
+                            uint8_t *out, uint32_t *out_len);
+```
+
+**功能**
+接收虚拟地址数据使用对称分组算法执行加解密。
+
+**参数**
+* [in] handle - cipher的handle，必须经过rk_cipher_init初始化。
 * [in] in - 输入数据buffer
 * [in] in_len - 输入数据的Byte长度
 * [out] out - 输出计算结果
@@ -416,19 +459,19 @@ RK_RES rk_cipher_update(uint32_t cipher_handle, uint8_t *in, uint32_t in_len,
 ### rk_cipher_final
 
 ```c
-RK_RES rk_cipher_final(uint32_t cipher_handle);
+RK_RES rk_cipher_final(rk_handle handle);
 ```
 
 **功能**
 对称分组算法，结束计算，清除handle。
 
 **参数**
-* [in] cipher_handle - 输入的handle
+* [in] handle - cipher的handle，必须经过rk_cipher_init初始化。
 
 ### rk_write_oem_hr_otp
 
 ```c
-RK_RES rk_write_oem_hr_otp(enum RK_OEM_HR_OTP_KEYID key_id, uint8_t *key, 			     uint32_t key_len);
+RK_RES rk_write_oem_hr_otp(enum RK_OEM_HR_OTP_KEYID key_id, uint8_t *key, uint32_t key_len);
 ```
 
 **功能**
