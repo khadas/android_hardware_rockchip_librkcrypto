@@ -3,6 +3,7 @@
  */
 #include <string.h>
 #include "otp_key_crypto.h"
+#include "rkcrypto_core_int.h"
 #include "rkcrypto_trace.h"
 #include "tee_client_api.h"
 
@@ -15,6 +16,7 @@
 #define STORAGE_CMD_SET_OEM_HR_OTP_READ_LOCK		15
 #define STORAGE_CMD_OEM_OTP_KEY_IS_WRITTEN		16
 #define CRYPTO_SERVICE_CMD_OEM_OTP_KEY_CIPHER		0x00000001
+#define CRYPTO_SERVICE_CMD_OEM_OTP_KEY_PHYS_CIPHER	0x00000002
 
 RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 			    uint32_t key_len)
@@ -272,5 +274,105 @@ out1:
 
 out:
 	TEEC_FinalizeContext(&contex);
+	return res;
+}
+
+RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *config,
+			     int32_t in_fd, int32_t out_fd, uint32_t len)
+{
+	RK_RES res;
+	TEEC_Context contex;
+	TEEC_Session session;
+	TEEC_Operation operation;
+	TEEC_UUID uuid = RK_CRYPTO_SERVICE_UUID;
+	uint32_t error_origin = 0;
+	struct crypt_fd_map_op src_mop;
+	struct crypt_fd_map_op dst_mop;
+
+	RK_ALG_CHECK_PARAM(in_fd < 0);
+	RK_ALG_CHECK_PARAM(out_fd < 0);
+	RK_ALG_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
+			   key_id != RK_OEM_OTP_KEY1 &&
+			   key_id != RK_OEM_OTP_KEY2 &&
+			   key_id != RK_OEM_OTP_KEY3 &&
+			   key_id != RK_OEM_OTP_KEY_FW);
+	RK_ALG_CHECK_PARAM(!config);
+	RK_ALG_CHECK_PARAM(config->algo != RK_ALGO_AES &&
+			   config->algo != RK_ALGO_SM4);
+	RK_ALG_CHECK_PARAM(config->mode >= RK_CIPHER_MODE_XTS);
+	RK_ALG_CHECK_PARAM(config->operation != RK_MODE_ENCRYPT &&
+			   config->operation != RK_MODE_DECRYPT);
+	RK_ALG_CHECK_PARAM(config->key_len != 16 &&
+			   config->key_len != 24 &&
+			   config->key_len != 32);
+	RK_ALG_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
+			   config->key_len != 16);
+	RK_ALG_CHECK_PARAM(len % AES_BLOCK_SIZE || len == 0);
+
+	memset(&src_mop, 0, sizeof(src_mop));
+	memset(&dst_mop, 0, sizeof(dst_mop));
+	src_mop.dma_fd = in_fd;
+	dst_mop.dma_fd = out_fd;
+
+	res = rk_crypto_fd_ioctl(RIOCCRYPT_FD_MAP, &src_mop);
+	if (res != TEEC_SUCCESS) {
+		E_TRACE("RIOCCRYPT_FD_MAP failed, res= 0x%x", res);
+		return res;
+	}
+
+	res = rk_crypto_fd_ioctl(RIOCCRYPT_FD_MAP, &dst_mop);
+	if (res != TEEC_SUCCESS) {
+		E_TRACE("RIOCCRYPT_FD_MAP failed, res= 0x%x", res);
+		goto out;
+	}
+
+	res = TEEC_InitializeContext(NULL, &contex);
+	if (res != TEEC_SUCCESS) {
+		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
+		res = RK_ALG_ERR_GENERIC;
+		goto out1;
+	}
+
+	res = TEEC_OpenSession(&contex, &session, &uuid, TEEC_LOGIN_PUBLIC,
+			       NULL, NULL, &error_origin);
+	if (res != TEEC_SUCCESS) {
+		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
+			res, error_origin);
+		res = RK_ALG_ERR_GENERIC;
+		goto out2;
+	}
+
+	memset(&operation, 0, sizeof(TEEC_Operation));
+	operation.params[0].value.a       = key_id;
+	operation.params[1].tmpref.buffer = config;
+	operation.params[1].tmpref.size   = sizeof(rk_cipher_config);
+	operation.params[2].value.a       = src_mop.phys_addr;
+	operation.params[2].value.b       = len;
+	operation.params[3].value.a       = dst_mop.phys_addr;
+
+	operation.paramTypes = TEEC_PARAM_TYPES(TEEC_VALUE_INPUT,
+						TEEC_MEMREF_TEMP_INPUT,
+						TEEC_VALUE_INPUT,
+						TEEC_VALUE_INPUT);
+
+	res = TEEC_InvokeCommand(&session, CRYPTO_SERVICE_CMD_OEM_OTP_KEY_PHYS_CIPHER,
+				 &operation, &error_origin);
+	if (res != TEEC_SUCCESS) {
+		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
+			res, error_origin);
+		res = RK_ALG_ERR_GENERIC;
+	}
+
+	TEEC_CloseSession(&session);
+
+out2:
+	TEEC_FinalizeContext(&contex);
+
+out1:
+	rk_crypto_fd_ioctl(RIOCCRYPT_FD_UNMAP, &dst_mop);
+
+out:
+	rk_crypto_fd_ioctl(RIOCCRYPT_FD_UNMAP, &src_mop);
+
 	return res;
 }
