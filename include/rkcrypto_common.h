@@ -5,8 +5,10 @@
 #define _RKCRYPTO_COMMON_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef uint32_t RK_RES;
+typedef uint32_t rk_handle;
 
 /* API return codes */
 #define RK_ALG_SUCCESS			0x00000000
@@ -14,10 +16,13 @@ typedef uint32_t RK_RES;
 #define RK_ALG_ERR_PARAMETER		0xF0000001
 #define RK_ALG_ERR_STATE		0xF0000002
 #define RK_ALG_ERR_NOT_SUPPORTED	0xF0000003
+#define RK_ALG_ERR_OUT_OF_MEMORY	0xF0000004
 
 /* Algorithm operation */
 #define RK_MODE_ENCRYPT			1
 #define RK_MODE_DECRYPT			0
+#define RK_OP_CIPHER_ENC		RK_MODE_ENCRYPT
+#define RK_OP_CIPHER_DEC		RK_MODE_DECRYPT
 
 /* Algorithm block length */
 #define DES_BLOCK_SIZE			8
@@ -28,8 +33,21 @@ typedef uint32_t RK_RES;
 #define SHA256_HASH_SIZE		32
 #define SHA384_HASH_SIZE		48
 #define SHA512_HASH_SIZE		64
+#define SHA512_224_HASH_SIZE		28
+#define SHA512_256_HASH_SIZE		32
 #define MD5_HASH_SIZE			16
 #define SM3_HASH_SIZE			32
+
+#define SM3_BLOCK_SIZE			64
+#define SHA1_BLOCK_SIZE			64
+#define MD5_BLOCK_SIZE			64
+#define SHA224_BLOCK_SIZE		64
+#define SHA256_BLOCK_SIZE		64
+#define SHA384_BLOCK_SIZE		128
+#define SHA512_BLOCK_SIZE		128
+#define SHA512_224_BLOCK_SIZE		128
+#define SHA512_256_BLOCK_SIZE		128
+
 #define AES_AE_DATA_BLOCK		128
 #define MAX_HASH_BLOCK_SIZE		128
 #define MAX_TDES_KEY_SIZE		24
@@ -37,38 +55,49 @@ typedef uint32_t RK_RES;
 
 #define RK_CRYPTO_MAX_DATA_LEN		(1 * 1024 * 1024)
 
-typedef struct {
-	uint32_t	algo;
-	uint32_t	mode;
-	uint32_t	operation;
-	uint8_t		key[64];
-	uint32_t	key_len;
-	uint8_t		iv[16];
-	void		*reserved;
-} rk_cipher_config;
-
 /* Crypto algorithm */
 enum RK_CRYPTO_ALGO {
-	RK_ALGO_AES = 1,
+	RK_ALGO_CIPHER_TOP = 0x00,
+	RK_ALGO_AES,
 	RK_ALGO_DES,
 	RK_ALGO_TDES,
 	RK_ALGO_SM4,
-	RK_ALGO_ALGO_MAX
+	RK_ALGO_CIPHER_BUTT,
+
+	RK_ALGO_HASH_TOP = 0x10,
+	RK_ALGO_MD5,
+	RK_ALGO_SHA1,
+	RK_ALGO_SHA256,
+	RK_ALGO_SHA224,
+	RK_ALGO_SHA512,
+	RK_ALGO_SHA384,
+	RK_ALGO_SHA512_224,
+	RK_ALGO_SHA512_256,
+	RK_ALGO_SM3,
+	RK_ALGO_HASH_BUTT,
+
+	RK_ALGO_HMAC_TOP = 0x20,
+	RK_ALGO_HMAC_MD5,
+	RK_ALGO_HMAC_SHA1,
+	RK_ALGO_HMAC_SHA256,
+	RK_ALGO_HMAC_SHA512,
+	RK_ALGO_HMAC_SM3,
+	RK_ALGO_HMAC_BUTT,
 };
 
 /* Crypto mode */
 enum RK_CIPIHER_MODE {
 	RK_CIPHER_MODE_ECB = 0,
-	RK_CIPHER_MODE_CBC = 1,
-	RK_CIPHER_MODE_CTS = 2,
-	RK_CIPHER_MODE_CTR = 3,
-	RK_CIPHER_MODE_CFB = 4,
-	RK_CIPHER_MODE_OFB = 5,
-	RK_CIPHER_MODE_XTS = 6,
-	RK_CIPHER_MODE_CCM = 7,
-	RK_CIPHER_MODE_GCM = 8,
-	RK_CIPHER_MODE_CMAC = 9,
-	RK_CIPHER_MODE_CBC_MAC = 10,
+	RK_CIPHER_MODE_CBC,
+	RK_CIPHER_MODE_CTS,
+	RK_CIPHER_MODE_CTR,
+	RK_CIPHER_MODE_CFB,
+	RK_CIPHER_MODE_OFB,
+	RK_CIPHER_MODE_XTS,
+	RK_CIPHER_MODE_CCM,
+	RK_CIPHER_MODE_GCM,
+	RK_CIPHER_MODE_CMAC,
+	RK_CIPHER_MODE_CBC_MAC,
 	RK_CIPHER_MODE_MAX
 };
 
@@ -81,5 +110,34 @@ enum RK_OEM_OTP_KEYID {
 	RK_OEM_OTP_KEYMAX
 };
 
-#endif /* _RKCRYPTO_COMMON_H_ */
+typedef struct {
+	uint32_t	algo;
+	uint32_t	mode;
+	uint32_t	operation;
+	uint8_t		key[64];
+	uint32_t	key_len;
+	uint8_t		iv[16];
+	void		*reserved;
+} rk_cipher_config;
 
+typedef struct {
+	uint32_t	algo;
+	uint32_t	mode;
+	uint32_t	operation;
+	uint8_t		key[32];
+	uint32_t	key_len;
+	uint8_t		iv[16];
+	uint32_t	iv_len;
+	uint32_t	tag_len;
+	uint32_t	aad_len;
+	uint32_t	payload_len;
+	void		*reserved;
+} rk_ae_config;
+
+typedef struct {
+	uint32_t	algo;
+	uint8_t		*key;
+	uint32_t	key_len;
+} rk_hash_config;
+
+#endif /* _RKCRYPTO_COMMON_H_ */

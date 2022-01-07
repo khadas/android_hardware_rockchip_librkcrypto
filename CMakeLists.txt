@@ -39,6 +39,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 include_directories(include)
+include_directories(third_party/libdrm)
 file(GLOB SOURCES "src/*.c")
 
 add_library(rkcrypto SHARED ${SOURCES})

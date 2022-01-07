@@ -25,6 +25,9 @@ SRC_FILES_DIR := $(wildcard $(LOCAL_PATH)/src/*.c)
 LOCAL_SRC_FILES := $(SRC_FILES_DIR:$(LOCAL_PATH)/%=%)
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/include \
+                    $(LOCAL_PATH)/third_party/libdrm \
+
+LOCAL_SHARED_LIBRARIES+= libdrm
 
 LOCAL_MODULE:= librkcrypto
 LOCAL_MODULE_TAGS := optional
