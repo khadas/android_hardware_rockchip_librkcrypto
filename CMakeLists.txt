@@ -15,7 +15,6 @@ set (CROSS_COMPILE32 "arm-none-linux-gnueabihf-gcc")
 set (CROSS_COMPILE64 "aarch64-none-linux-gnu-gcc")
 set (CROSS_COMPILE32_GXX "arm-none-linux-gnueabihf-g++")
 set (CROSS_COMPILE64_GXX "aarch64-none-linux-gnu-g++")
-
 set (AARCH64_TOOLCHAIN_GCC "${TOOLCHAIN_PREBUILTS}/${TOOLCHAIN_PATH_AARCH64}/${CROSS_COMPILE64}")
 set (AARCH64_TOOLCHAIN_GXX "${TOOLCHAIN_PREBUILTS}/${TOOLCHAIN_PATH_AARCH64}/${CROSS_COMPILE64_GXX}")
 set (ARM32_TOOLCHAIN_GCC "${TOOLCHAIN_PREBUILTS}/${TOOLCHAIN_PATH_ARM32}/${CROSS_COMPILE32}")
@@ -32,21 +31,21 @@ else ()
 endif ()
 
 project (rkcrypto C)
-set(CMAKE_BUILD_TYPE Release)
+
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+	"Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
+	FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
+
 include_directories(include)
+file(GLOB SOURCES "src/*.c")
+
+add_library(rkcrypto SHARED ${SOURCES})
 
 set(LIBRARY_TEE_PATH ${PROJECT_SOURCE_DIR}/../security/bin/optee_v2/lib/${ARM_PLATFORM})
-
-file(GLOB SOURCES "src/*.c")
-add_library(rkcrypto SHARED ${SOURCES})
 target_link_libraries(rkcrypto ${LIBRARY_TEE_PATH}/libteec.so)
 
-file(GLOB TEST_SOURCES "test/*.c")
-file(GLOB C_mode_SOURCES "test/c_mode/*.c")
-include_directories(test/include)
-include_directories(test/c_mode)
-add_executable(librkcrypto_test ${C_mode_SOURCES} ${TEST_SOURCES})
-target_link_libraries(librkcrypto_test rkcrypto)
+add_subdirectory(demo)
 
-add_executable(librkcrypto_demo ./demo/rk_demo.c)
-target_link_libraries(librkcrypto_demo rkcrypto)
+add_subdirectory(test)
