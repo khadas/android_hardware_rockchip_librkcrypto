@@ -1,6 +1,6 @@
 # **Rockchip librkctypto 开发指南**
 
-发布版本：V0.05
+发布版本：V1.01
 
 日期：2022.1
 
@@ -63,6 +63,8 @@ Fuzhou Rockchip Electronics Co., Ltd.
 | 2021-12-15 | V0.03 | 王小滨 | draft                                                        |
 | 2021-12-29 | V0.04 | 林金寒 | 1.修改memory相关定义<br />2.删除rk_hash_ctx，使用handle形式<br />3.修改hash相关接口<br />4.修改cipher相关接口 |
 | 2021-1-6   | V0.05 | 王小滨 |  订正文档格式，更新oem_otp相关API              |
+| 2021-1-7   | V1.00 | 王小滨 |  发布oem_otp相关API的版本                     |
+| 2021-1-10  | V1.01 | 王小滨 |  更新适用范围和注意事项                        |
 
 ------
 [TOC]
@@ -71,14 +73,26 @@ Fuzhou Rockchip Electronics Co., Ltd.
 
 ## 适用范围
 
-| 文档适用范围    |     备注      |
-| :------------: | :----------: |
-|     RK3588     |              |
+|             API                 | rk3588 | rk3566/rk3568 | rv1109/rv1126 | others |
+| :-----------------------------: | :-----: | :----------: | :-----------: | :----: |
+| rk_crypto_mem_alloc/free        | √       |              |               |        |
+| rk_crypto_init/deinit           | √       |              |               |        |
+| rk_get_random                   | √       |              |               |        |
+| rk_hash_init/update/update_virt/final | √ |              |               |        |
+| rk_cipher_init/crypt/crypt_virt/final | √ |              |               |        |
+| rk_write_oem_otp_key            | √       | √            | √             |        |
+| rk_set_oem_hr_otp_read_lock     | √       |              |               |        |
+| rk_oem_otp_key_cipher           | √       | √            | √             |        |
 
 ## 注意事项
 
-- 对称算法的输入数据长度，要求与所选算法的block对齐
-- 为了提高效率，建议选用通过dma_fd传递数据的算法接口
+- **对称算法的输入数据长度，要求与所选算法的block对齐**
+- **为了提高效率，建议选用通过dma_fd传递数据的算法接口**
+- **`rk_set_oem_hr_otp_read_lock`：当设置的key_id为`RK_OEM_OTP_KEY0`或者`RK_OEM_OTP_KEY1`或者`RK_OEM_OTP_KEY2`时，设置成功后，会影响其他OTP区域的属性，例如部分OTP区域变为不可写，详见`Rockchip_Developer_Guide_OTP_CN`文档**
+- **使用以下接口前，需确保TEE功能可用，TEE相关说明见`Rockchip_Developer_Guide_TEE_SDK_CN`文档**
+  - `rk_write_oem_otp_key`
+  - `rk_set_oem_hr_otp_read_lock`
+  - `rk_oem_otp_key_cipher`
 
 ## 数据结构
 
