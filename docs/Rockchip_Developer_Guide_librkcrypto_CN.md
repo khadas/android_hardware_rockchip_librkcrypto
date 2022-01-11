@@ -64,7 +64,7 @@ Fuzhou Rockchip Electronics Co., Ltd.
 | 2021-12-29 | V0.04 | 林金寒 | 1.修改memory相关定义<br />2.删除rk_hash_ctx，使用handle形式<br />3.修改hash相关接口<br />4.修改cipher相关接口 |
 | 2021-1-6   | V0.05 | 王小滨 |  订正文档格式，更新oem_otp相关API              |
 | 2021-1-7   | V1.00 | 王小滨 |  发布oem_otp相关API的版本                     |
-| 2021-1-10  | V1.01 | 王小滨 |  更新适用范围和注意事项                        |
+| 2021-1-11  | V1.01 | 王小滨 |  更新适用范围和注意事项                        |
 
 ------
 [TOC]
@@ -88,11 +88,12 @@ Fuzhou Rockchip Electronics Co., Ltd.
 
 - **对称算法的输入数据长度，要求与所选算法的block对齐**
 - **为了提高效率，建议选用通过dma_fd传递数据的算法接口**
-- **`rk_set_oem_hr_otp_read_lock`：当设置的key_id为`RK_OEM_OTP_KEY0`或者`RK_OEM_OTP_KEY1`或者`RK_OEM_OTP_KEY2`时，设置成功后，会影响其他OTP区域的属性，例如部分OTP区域变为不可写，详见`Rockchip_Developer_Guide_OTP_CN`文档**
 - **使用以下接口前，需确保TEE功能可用，TEE相关说明见`Rockchip_Developer_Guide_TEE_SDK_CN`文档**
   - `rk_write_oem_otp_key`
   - `rk_set_oem_hr_otp_read_lock`
   - `rk_oem_otp_key_cipher`
+- **`rk_set_oem_hr_otp_read_lock`：当设置的key_id为`RK_OEM_OTP_KEY0`或者`RK_OEM_OTP_KEY1`或者`RK_OEM_OTP_KEY2`时，设置成功后，会影响其他OTP区域的属性，例如部分OTP区域变为不可写，详见`Rockchip_Developer_Guide_OTP_CN`文档**
+- **`rk_oem_otp_key_cipher`：支持的len最大值受TEE的共享内存影响，如果使用本接口前已占用TEE共享内存，那么len的最大值可能比预期的小**
 
 ## 数据结构
 
@@ -531,8 +532,6 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id);
 设置指定OEM OTP区域的read lock标志，设置成功后，该区域禁止写数据，并且该区域已有的数据CPU软件不可读，可通过`rk_oem_otp_key_cipher`接口使用密钥。
 OEM OTP的相关特性说明，见`Rockchip_Developer_Guide_OTP_CN`文档。
 
-**<u>注意：当设置的key_id为`RK_OEM_OTP_KEY0`或者`RK_OEM_OTP_KEY1`或者`RK_OEM_OTP_KEY2`时，设置成功后，会影响其他OTP区域的属性，例如部分OTP区域变为不可写，详见`Rockchip_Developer_Guide_OTP_CN`文档。</u>**
-
 **参数**
 
 - [in] key_id - 将要设置的key_id，支持`RK_OEM_OTP_KEY0 - 3`
@@ -557,4 +556,4 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 密钥长度支持16、24、32 Bytes，若是rv1109/rv1126平台，密钥长度仅支持16、32，当key_id为`RK_OEM_OTP_KEY_FW`时密钥长度仅支持16
 - [in] src - 待计算数据的buffer，支持与dst相同地址，即支持原地加解密
 - [out] dst - 计算结果的buffer，支持与dst相同地址
-- [in] len - 输入和输出数据buffer的Byte长度，要求与所用算法的block对齐，最大支持1MB
+- [in] len - 输入和输出数据buffer的Byte长度，要求与所用算法的block对齐，默认最大支持1MB，对于rv1126/rv1109，len最大约为500KB
