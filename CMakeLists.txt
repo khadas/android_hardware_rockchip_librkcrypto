@@ -43,8 +43,7 @@ file(GLOB SOURCES "src/*.c")
 
 add_library(rkcrypto SHARED ${SOURCES})
 
-set(LIBRARY_TEE_PATH ${PROJECT_SOURCE_DIR}/../security/bin/optee_v2/lib/${ARM_PLATFORM})
-target_link_libraries(rkcrypto ${LIBRARY_TEE_PATH}/libteec.so)
+target_link_libraries(rkcrypto dl)
 
 add_subdirectory(demo)
 
