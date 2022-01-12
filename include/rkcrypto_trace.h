@@ -9,13 +9,13 @@
 
 #if DEBUG
 #define D_TRACE(fmt,...) \
-	printf("%s(%d)-<%s>: "fmt, "\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+	printf("RKCRYPTO D[%s, %d]: "fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
 #else
 #define D_TRACE(fmt,...)		(void)0
 #endif
 
 #define E_TRACE(fmt,...) \
-	printf("%s(%d)-<%s>: "fmt"\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+	printf("RKCRYPTO E[%s, %d]: "fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
 
 #define RK_ALG_CHECK_PARAM(_val)\
 	do {\
