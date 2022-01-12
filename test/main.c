@@ -6,11 +6,16 @@
 #include <strings.h>
 #include "librkcrypto.h"
 #include "test_otp_key_crypto.h"
+#include "test_cipher.h"
+#include "test_hash.h"
 
 typedef enum {
 	FUNC = 0,
 	SPEED,
 	SETKEY,
+	CIPHER,
+	HASH,
+	HMAC,
 	TEST_NULL,
 } enum_func;
 
@@ -21,6 +26,9 @@ static const struct {
 	{"func",	FUNC},
 	{"speed",	SPEED},
 	{"setkey",	SETKEY},
+	{"cipher",	CIPHER},
+	{"hash",	HASH},
+	{"hmac",	HMAC},
 	{NULL,		TEST_NULL},
 };
 
@@ -72,6 +80,15 @@ int main(int argc, char *argv[])
 		break;
 	case SETKEY:
 		test_write_otp_key();
+		break;
+	case CIPHER:
+		test_cipher();
+		break;
+	case HASH:
+		test_hash();
+		break;
+	case HMAC:
+		test_hmac();
 		break;
 	default:
 		break;

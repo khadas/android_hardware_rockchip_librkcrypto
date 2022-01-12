@@ -7,9 +7,7 @@
 #include "c_model.h"
 #include "librkcrypto.h"
 #include "test_otp_key_crypto.h"
-
-
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#include "test_utils.h"
 
 uint8_t otp_key0[32] = {
 	0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
@@ -59,26 +57,6 @@ static const char *mode_name_tab[] = {
 	[RK_CIPHER_MODE_CMAC]    = "CMAC",
 	[RK_CIPHER_MODE_CBC_MAC] = "CBC_MAC"
 };
-
-static void dump_hex(char *var_name, const uint8_t *data, uint32_t len)
-{
-	printf("LINE:%d  %s[HEX]:", __LINE__, var_name);
-
-	for (int i = 0; i < len; i++) {
-		if (i % 16 == 0)
-			printf("\n");
-
-		printf("%02x", data[i]);
-	}
-
-	printf("\n");
-}
-
-static void get_rng(uint8_t *trn, uint32_t len)
-{
-	for (uint32_t i = 0; i < len; i++)
-		trn[i] = rand() & 0xff;
-}
 
 void test_set_otp_tag(void)
 {
@@ -232,8 +210,8 @@ static int test_func_simple(uint32_t key_id, uint32_t key_len,
 	memset(out_dec, 0x00, sizeof(out_dec));
 	memset(out_soft, 0x00, sizeof(out_soft));
 
-	get_rng(iv, sizeof(iv));
-	get_rng(in, data_len);
+	test_get_rng(iv, sizeof(iv));
+	test_get_rng(in, data_len);
 
 	switch (key_id) {
 	case RK_OEM_OTP_KEY0:
@@ -274,11 +252,11 @@ static int test_func_simple(uint32_t key_id, uint32_t key_len,
 
 	if (memcmp(out_soft, out, data_len)) {
 		printf("compare ENC result faild!!!\n");
-		dump_hex("key:", key, key_len);
-		dump_hex("iv:", iv, sizeof(iv));
-		dump_hex("in:", in, data_len > 32 ? 128 : data_len);
-		dump_hex("out:", out, data_len > 32 ? 128 : data_len);
-		dump_hex("out_soft:", out_soft, data_len > 32 ? 128 : data_len);
+		test_dump_hex("key:", key, key_len);
+		test_dump_hex("iv:", iv, sizeof(iv));
+		test_dump_hex("in:", in, data_len > 32 ? 128 : data_len);
+		test_dump_hex("out:", out, data_len > 32 ? 128 : data_len);
+		test_dump_hex("out_soft:", out_soft, data_len > 32 ? 128 : data_len);
 		return res;
 	} else
 		printf("ENC result success.\n");
@@ -291,11 +269,11 @@ static int test_func_simple(uint32_t key_id, uint32_t key_len,
 
 	if (memcmp(out_dec, in, data_len)) {
 		printf("compare DEC result faild!!!\n");
-		dump_hex("key:", key, key_len);
-		dump_hex("iv:", iv, sizeof(iv));
-		dump_hex("in:", in, data_len > 32 ? 128 : data_len);
-		dump_hex("out:", out, data_len > 32 ? 128 : data_len);
-		dump_hex("out_dec:", out_dec, data_len > 32 ? 128 : data_len);
+		test_dump_hex("key:", key, key_len);
+		test_dump_hex("iv:", iv, sizeof(iv));
+		test_dump_hex("in:", in, data_len > 32 ? 128 : data_len);
+		test_dump_hex("out:", out, data_len > 32 ? 128 : data_len);
+		test_dump_hex("out_dec:", out_dec, data_len > 32 ? 128 : data_len);
 		return res;
 	} else
 		printf("DEC result success.\n");
@@ -320,8 +298,8 @@ static int test_speed_simple(uint32_t key_id, uint32_t key_len,
 	memset(in, 0x00, sizeof(in));
 	memset(out, 0x00, sizeof(out));
 
-	get_rng(iv, sizeof(iv));
-	get_rng(in, data_len);
+	test_get_rng(iv, sizeof(iv));
+	test_get_rng(in, data_len);
 
 	printf("### key_id:%d, algo:%s, mode:%s, key_len:%d, data_len:%d, count:%d\n",
 	       key_id, algo_name_tab[algo], mode_name_tab[mode], key_len, data_len, count);
