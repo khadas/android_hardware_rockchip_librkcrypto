@@ -4,6 +4,7 @@
 #include <string.h>
 #include "otp_key_crypto.h"
 #include "rkcrypto_trace.h"
+#include "tee_client_api.h"
 
 #define STORAGE_UUID { 0x2d26d8a8, 0x5134, 0x4dd8, \
 		{ 0xb3, 0x2f, 0xb3, 0x4b, 0xce, 0xeb, 0xc4, 0x71 } }

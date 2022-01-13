@@ -48,10 +48,15 @@ file(GLOB SOURCES "src/*.c")
 file(GLOB SOURCES_DRM "third_party/libdrm/src/*.c")
 add_definitions(-DMAJOR_IN_SYSMACROS=1 -D_GNU_SOURCE)
 
-add_library(rkcrypto SHARED ${SOURCES} ${SOURCES_DRM})
+# add libteec api
+add_definitions(-DBINARY_PREFIX=\"TEEC\")
+set(TEEC_PATH third_party/optee_client/libteec)
+include_directories(${TEEC_PATH}/../public ${TEEC_PATH}/include)
+file(GLOB SOURCES_TEEC
+	${TEEC_PATH}/src/tee_client_api.c
+	${TEEC_PATH}/src/teec_trace.c)
 
-set(LIBRARY_TEE_PATH ${PROJECT_SOURCE_DIR}/../security/bin/optee_v2/lib/${ARM_PLATFORM})
-target_link_libraries(rkcrypto ${LIBRARY_TEE_PATH}/libteec.so)
+add_library(rkcrypto SHARED ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
 
 add_subdirectory(demo)
 

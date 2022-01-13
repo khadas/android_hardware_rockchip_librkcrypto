@@ -5,7 +5,6 @@
 #define _OTP_KEY_CRYPTO_H_
 
 #include "rkcrypto_common.h"
-#include "tee_client_api.h"
 
 RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 			    uint32_t key_len);
