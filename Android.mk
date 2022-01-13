@@ -15,19 +15,19 @@ endif
 endif
 
 include $(CLEAR_VARS)
-LOCAL_CFLAGS += -DANDROID_BUILD -DUSER_SPACE
-LOCAL_CFLAGS += -Wall  -Wno-error
+LOCAL_CFLAGS += -DANDROID_BUILD -DUSER_SPACE -DMAJOR_IN_SYSMACROS=1 -D_GNU_SOURCE
+LOCAL_CFLAGS += -Wall  -Wno-error -Wno-enum-conversion -Wno-unused-parameter
 
 LOCAL_LDFLAGS += -ldl
 LOCAL_LDFLAGS += -llog
 
 SRC_FILES_DIR := $(wildcard $(LOCAL_PATH)/src/*.c)
+SRC_FILES_DIR += $(wildcard $(LOCAL_PATH)/third_party/libdrm/src/*.c)
 LOCAL_SRC_FILES := $(SRC_FILES_DIR:$(LOCAL_PATH)/%=%)
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/include \
-                    $(LOCAL_PATH)/third_party/libdrm \
-
-LOCAL_SHARED_LIBRARIES+= libdrm
+                    $(LOCAL_PATH)/third_party/libdrm/include \
+                    $(LOCAL_PATH)/third_party/libdrm/include/drm \
 
 LOCAL_MODULE:= librkcrypto
 LOCAL_MODULE_TAGS := optional

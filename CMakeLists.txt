@@ -39,10 +39,16 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 include_directories(include)
-include_directories(third_party/libdrm)
+include_directories(third_party/libdrm/include)
+include_directories(third_party/libdrm/include/drm)
+
 file(GLOB SOURCES "src/*.c")
 
-add_library(rkcrypto SHARED ${SOURCES})
+# add libdrm file
+file(GLOB SOURCES_DRM "third_party/libdrm/src/*.c")
+add_definitions(-DMAJOR_IN_SYSMACROS=1 -D_GNU_SOURCE)
+
+add_library(rkcrypto SHARED ${SOURCES} ${SOURCES_DRM})
 
 target_link_libraries(rkcrypto dl)
 
