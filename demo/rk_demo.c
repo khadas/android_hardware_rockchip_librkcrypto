@@ -6,8 +6,9 @@
 #include "librkcrypto.h"
 #include "rkcrypto_common.h"
 
-void main(void)
+int main(void)
 {
+	int ret = -1;
 	rk_cipher_config config;
 	uint32_t key_id = RK_OEM_OTP_KEY0;
 	uint32_t key_len = 16;
@@ -52,12 +53,12 @@ void main(void)
 
 	if (rk_oem_otp_key_cipher(key_id, &config, input, output, data_len)) {
 		printf("Do rk_oem_otp_key_cipher error!\n");
-		return;
+		goto exit;
 	}
 
 	if (memcmp(output, expected_enc, data_len)) {
 		printf("ENC result not equal to expected value, error!\n");
-		return;
+		goto exit;
 	}
 
 	printf("Test rk_oem_otp_key_cipher ENC success!\n");
@@ -65,15 +66,17 @@ void main(void)
 	config.operation = RK_MODE_DECRYPT;
 	if (rk_oem_otp_key_cipher(key_id, &config, output, output, data_len)) {
 		printf("Do rk_oem_otp_key_cipher error!\n");
-		return;
+		goto exit;
 	}
 
 	if (memcmp(output, input, data_len)) {
 		printf("DEC result not equal to expected value, error!\n");
-		return;
+		goto exit;
 	}
 
 	printf("Test rk_oem_otp_key_cipher DEC success!\n");
 
-	return;
+	ret = 0;
+exit:
+	return ret;
 }
