@@ -50,7 +50,8 @@ add_definitions(-DMAJOR_IN_SYSMACROS=1 -D_GNU_SOURCE)
 
 add_library(rkcrypto SHARED ${SOURCES} ${SOURCES_DRM})
 
-target_link_libraries(rkcrypto dl)
+set(LIBRARY_TEE_PATH ${PROJECT_SOURCE_DIR}/../security/bin/optee_v2/lib/${ARM_PLATFORM})
+target_link_libraries(rkcrypto ${LIBRARY_TEE_PATH}/libteec.so)
 
 add_subdirectory(demo)
 

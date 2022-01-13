@@ -18,7 +18,7 @@ include $(CLEAR_VARS)
 LOCAL_CFLAGS += -DANDROID_BUILD -DUSER_SPACE -DMAJOR_IN_SYSMACROS=1 -D_GNU_SOURCE
 LOCAL_CFLAGS += -Wall  -Wno-error -Wno-enum-conversion -Wno-unused-parameter
 
-LOCAL_LDFLAGS += -ldl
+LOCAL_LDFLAGS += $(CLIENT_LIB_PATH)/libteec.so
 LOCAL_LDFLAGS += -llog
 
 SRC_FILES_DIR := $(wildcard $(LOCAL_PATH)/src/*.c)
