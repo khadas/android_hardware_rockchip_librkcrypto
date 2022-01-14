@@ -9,11 +9,11 @@ clear_out()
 
 collect_bin()
 {
-	mkdir $SCRPIT_DIR/out/$ARM_BIT
-	cp $SCRPIT_DIR/out/tmp/librkcrypto.so $SCRPIT_DIR/out/$ARM_BIT/
-	cp $SCRPIT_DIR/out/tmp/test/c_mode/libc_mode.so $SCRPIT_DIR/out/$ARM_BIT/
-	cp $SCRPIT_DIR/out/tmp/test/librkcrypto_test $SCRPIT_DIR/out/$ARM_BIT/
-	cp $SCRPIT_DIR/out/tmp/demo/librkcrypto_demo $SCRPIT_DIR/out/$ARM_BIT/
+	TARGET_DIR=$SCRPIT_DIR/out/target/$ARM_BIT/
+	mkdir -p $TARGET_DIR
+	cp $SCRPIT_DIR/out/tmp/librkcrypto.so $TARGET_DIR
+	cp $SCRPIT_DIR/out/tmp/test/librkcrypto_test $TARGET_DIR
+	cp $SCRPIT_DIR/out/tmp/demo/librkcrypto_demo $TARGET_DIR
 }
 
 build()

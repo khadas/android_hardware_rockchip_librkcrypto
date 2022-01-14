@@ -26,12 +26,6 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/include \
 LOCAL_MODULE:= librkcrypto
 LOCAL_MODULE_TAGS := optional
 
-ifeq ($(strip $(TARGET_ARCH)), arm64)
-	LOCAL_MULTILIB := 64
-else
-	LOCAL_MULTILIB := 32
-endif
-
 LOCAL_VENDOR_MODULE := true
 include $(BUILD_SHARED_LIBRARY)
 
