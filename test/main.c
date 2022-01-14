@@ -10,8 +10,8 @@
 #include "test_hash.h"
 
 typedef enum {
-	FUNC = 0,
-	SPEED,
+	OTPKEY_FUNC = 0,
+	OTPKEY_SPEED,
 	SETKEY,
 	CIPHER,
 	HASH,
@@ -23,13 +23,13 @@ static const struct {
 	const char *word;
 	enum_func main_cmd;
 } keyword[] = {
-	{"func",	FUNC},
-	{"speed",	SPEED},
-	{"setkey",	SETKEY},
-	{"cipher",	CIPHER},
-	{"hash",	HASH},
-	{"hmac",	HMAC},
-	{NULL,		TEST_NULL},
+	{"otpkey_func",		OTPKEY_FUNC},
+	{"otpkey_speed",	OTPKEY_SPEED},
+	{"setkey",		SETKEY},
+	{"cipher",		CIPHER},
+	{"hash",		HASH},
+	{"hmac",		HMAC},
+	{NULL,			TEST_NULL},
 };
 
 static void printf_main_cmd(void)
@@ -67,10 +67,10 @@ int main(int argc, char *argv[])
 	printf("##### Test begin #####\n");
 
 	switch (invokeCommand) {
-	case FUNC:
+	case OTPKEY_FUNC:
 		test_func_otp_key_cipher();
 		break;
-	case SPEED:
+	case OTPKEY_SPEED:
 		if (argc < 3)
 			count = 100; //default
 		else
