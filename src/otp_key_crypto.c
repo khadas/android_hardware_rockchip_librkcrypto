@@ -13,6 +13,7 @@
 
 #define STORAGE_CMD_WRITE_OEM_OTP_KEY			14
 #define STORAGE_CMD_SET_OEM_HR_OTP_READ_LOCK		15
+#define STORAGE_CMD_OEM_OTP_KEY_IS_WRITTEN		16
 #define CRYPTO_SERVICE_CMD_OEM_OTP_KEY_CIPHER		0x00000001
 
 RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
@@ -71,6 +72,62 @@ RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 	}
 
 	TEEC_CloseSession(&session);
+out:
+	TEEC_FinalizeContext(&contex);
+	return res;
+}
+
+RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_written)
+{
+	RK_RES res;
+	TEEC_Context contex;
+	TEEC_Session session;
+	TEEC_Operation operation;
+	TEEC_UUID uuid = STORAGE_UUID;
+	uint32_t error_origin = 0;
+
+	RK_ALG_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
+			   key_id != RK_OEM_OTP_KEY1 &&
+			   key_id != RK_OEM_OTP_KEY2 &&
+			   key_id != RK_OEM_OTP_KEY3 &&
+			   key_id != RK_OEM_OTP_KEY_FW);
+	RK_ALG_CHECK_PARAM(!is_written);
+
+	res = TEEC_InitializeContext(NULL, &contex);
+	if (res != TEEC_SUCCESS) {
+		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
+		res = RK_ALG_ERR_GENERIC;
+		return res;
+	}
+
+	res = TEEC_OpenSession(&contex, &session, &uuid, TEEC_LOGIN_PUBLIC,
+			       NULL, NULL, &error_origin);
+	if (res != TEEC_SUCCESS) {
+		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
+			res, error_origin);
+		res = RK_ALG_ERR_GENERIC;
+		goto out;
+	}
+
+	memset(&operation, 0, sizeof(TEEC_Operation));
+	operation.params[0].value.a = key_id;
+	operation.paramTypes = TEEC_PARAM_TYPES(TEEC_VALUE_INOUT,
+						TEEC_NONE,
+						TEEC_NONE,
+						TEEC_NONE);
+
+	res = TEEC_InvokeCommand(&session, STORAGE_CMD_OEM_OTP_KEY_IS_WRITTEN,
+				 &operation, &error_origin);
+	if (res != TEEC_SUCCESS) {
+		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
+			res, error_origin);
+		res = RK_ALG_ERR_GENERIC;
+	} else {
+		*is_written = operation.params[0].value.b;
+	}
+
+	TEEC_CloseSession(&session);
+
 out:
 	TEEC_FinalizeContext(&contex);
 	return res;
