@@ -84,7 +84,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 		if (tmp_len > data_block) {
 			res = rk_hash_update_virt(hash_hdl, tmp_data, data_block, false);
 			if (res) {
-				E_TRACE("rk_hash_update_virt[%u/%u] error = %d\n",
+				E_TRACE("rk_hash_update_virt[%lu/%u] error = %d\n",
 					tmp_data - buffer, tmp_len, res);
 				goto exit;
 			}
@@ -92,7 +92,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 			data_block = tmp_len;
 			res = rk_hash_update_virt(hash_hdl, tmp_data, tmp_len, true);
 			if (res) {
-				E_TRACE("rk_hash_update_virt[%u/%u] error = %d\n",
+				E_TRACE("rk_hash_update_virt[%lu/%u] error = %d\n",
 					tmp_data - buffer, tmp_len, res);
 				goto exit;
 			}
