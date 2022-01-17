@@ -51,8 +51,8 @@ int main(void)
 	config.reserved  = NULL;
 	memcpy(config.iv, iv, sizeof(iv));
 
-	if (rk_oem_otp_key_cipher(key_id, &config, input, output, data_len)) {
-		printf("Do rk_oem_otp_key_cipher error!\n");
+	if (rk_oem_otp_key_cipher_virt(key_id, &config, input, output, data_len)) {
+		printf("Do rk_oem_otp_key_cipher_virt error!\n");
 		goto exit;
 	}
 
@@ -61,11 +61,11 @@ int main(void)
 		goto exit;
 	}
 
-	printf("Test rk_oem_otp_key_cipher ENC success!\n");
+	printf("Test rk_oem_otp_key_cipher_virt ENC success!\n");
 
 	config.operation = RK_MODE_DECRYPT;
-	if (rk_oem_otp_key_cipher(key_id, &config, output, output, data_len)) {
-		printf("Do rk_oem_otp_key_cipher error!\n");
+	if (rk_oem_otp_key_cipher_virt(key_id, &config, output, output, data_len)) {
+		printf("Do rk_oem_otp_key_cipher_virt error!\n");
 		goto exit;
 	}
 
@@ -74,7 +74,7 @@ int main(void)
 		goto exit;
 	}
 
-	printf("Test rk_oem_otp_key_cipher DEC success!\n");
+	printf("Test rk_oem_otp_key_cipher_virt DEC success!\n");
 
 	ret = 0;
 exit:

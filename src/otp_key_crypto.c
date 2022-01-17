@@ -184,8 +184,8 @@ out:
 	return res;
 }
 
-RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *config,
-			     uint8_t *src, uint8_t *dst, uint32_t len)
+RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *config,
+				  uint8_t *src, uint8_t *dst, uint32_t len)
 {
 	RK_RES res;
 	TEEC_Context contex;

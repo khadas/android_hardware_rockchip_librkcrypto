@@ -241,9 +241,9 @@ static int test_func_simple(uint32_t key_id, uint32_t key_len,
 
 	memcpy(config.iv, iv, sizeof(iv));
 
-	res = rk_oem_otp_key_cipher(key_id, &config, in, out, data_len);
+	res = rk_oem_otp_key_cipher_virt(key_id, &config, in, out, data_len);
 	if (res)
-		printf("test rk_oem_otp_key_cipher fail! 0x%08x\n", res);
+		printf("test rk_oem_otp_key_cipher_virt fail! 0x%08x\n", res);
 
 	res = test_func_simple_soft(algo, mode, RK_MODE_ENCRYPT, key, key_len, iv,
 				    in, data_len, out_soft);
@@ -263,9 +263,9 @@ static int test_func_simple(uint32_t key_id, uint32_t key_len,
 
 	config.operation = RK_MODE_DECRYPT;
 
-	res = rk_oem_otp_key_cipher(key_id, &config, out, out_dec, data_len);
+	res = rk_oem_otp_key_cipher_virt(key_id, &config, out, out_dec, data_len);
 	if (res)
-		printf("test rk_oem_otp_key_cipher fail! 0x%08x\n", res);
+		printf("test rk_oem_otp_key_cipher_virt fail! 0x%08x\n", res);
 
 	if (memcmp(out_dec, in, data_len)) {
 		printf("compare DEC result faild!!!\n");
@@ -315,9 +315,9 @@ static int test_speed_simple(uint32_t key_id, uint32_t key_len,
 	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	for (i = 0; i < count; i++) {
-		res = rk_oem_otp_key_cipher(key_id, &config, in, out, data_len);
+		res = rk_oem_otp_key_cipher_virt(key_id, &config, in, out, data_len);
 		if (res) {
-			printf("test rk_oem_otp_key_cipher fail! 0x%08x\n", res);
+			printf("test rk_oem_otp_key_cipher_virt fail! 0x%08x\n", res);
 			return res;
 		}
 	}
@@ -331,9 +331,9 @@ static int test_speed_simple(uint32_t key_id, uint32_t key_len,
 	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	for (i = 0; i < count; i++) {
-		res = rk_oem_otp_key_cipher(key_id, &config, in, out, data_len);
+		res = rk_oem_otp_key_cipher_virt(key_id, &config, in, out, data_len);
 		if (res) {
-			printf("test rk_oem_otp_key_cipher fail! 0x%08x\n", res);
+			printf("test rk_oem_otp_key_cipher_virt fail! 0x%08x\n", res);
 			return res;
 		}
 	}

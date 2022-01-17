@@ -82,7 +82,7 @@ Fuzhou Rockchip Electronics Co., Ltd.
 | rk_cipher_init/crypt/crypt_virt/final | √ |              |               |        |
 | rk_write_oem_otp_key            | √       | √            | √             |        |
 | rk_set_oem_hr_otp_read_lock     | √       |              |               |        |
-| rk_oem_otp_key_cipher           | √       | √            | √             |        |
+| rk_oem_otp_key_cipher_virt      | √       | √            | √             |        |
 
 ## 注意事项
 
@@ -91,9 +91,9 @@ Fuzhou Rockchip Electronics Co., Ltd.
 - **使用以下接口前，需确保TEE功能可用，TEE相关说明见`Rockchip_Developer_Guide_TEE_SDK_CN`文档**
   - `rk_write_oem_otp_key`
   - `rk_set_oem_hr_otp_read_lock`
-  - `rk_oem_otp_key_cipher`
+  - `rk_oem_otp_key_cipher_virt`
 - **`rk_set_oem_hr_otp_read_lock`：当设置的key_id为`RK_OEM_OTP_KEY0`或者`RK_OEM_OTP_KEY1`或者`RK_OEM_OTP_KEY2`时，设置成功后，会影响其他OTP区域的属性，例如部分OTP区域变为不可写，详见`Rockchip_Developer_Guide_OTP_CN`文档**
-- **`rk_oem_otp_key_cipher`：支持的len最大值受TEE的共享内存影响，如果使用本接口前已占用TEE共享内存，那么len的最大值可能比预期的小**
+- **`rk_oem_otp_key_cipher_virt`：支持的len最大值受TEE的共享内存影响，如果使用本接口前已占用TEE共享内存，那么len的最大值可能比预期的小**
 
 ## 数据结构
 
@@ -517,7 +517,7 @@ OEM OTP的相关特性说明，见`Rockchip_Developer_Guide_OTP_CN`文档。
 **参数**
 
 - [in] key_id - 将要写的key_id，默认支持`RK_OEM_OTP_KEY0 - 3`共4个密钥，对于rv1126/rv1109，额外支持key_id为`RK_OEM_OTP_KEY_FW`的密钥
-`RK_OEM_OTP_KEY_FW`：Boot ROM解密loader时用的密钥，`rk_oem_otp_key_cipher`接口支持用这个密钥去做业务数据加解密
+`RK_OEM_OTP_KEY_FW`：Boot ROM解密loader时用的密钥，`rk_oem_otp_key_cipher_virt`接口支持用这个密钥去做业务数据加解密
 - [in] key - 明文密钥
 - [in] key_len - 明文密钥长度，对于`RK_OEM_OTP_KEY_FW`，byte_len仅支持16，对于其他密钥，byte_len支持16、24、32
 
@@ -529,18 +529,18 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id);
 
 **功能**
 
-设置指定OEM OTP区域的read lock标志，设置成功后，该区域禁止写数据，并且该区域已有的数据CPU软件不可读，可通过`rk_oem_otp_key_cipher`接口使用密钥。
+设置指定OEM OTP区域的read lock标志，设置成功后，该区域禁止写数据，并且该区域已有的数据CPU软件不可读，可通过`rk_oem_otp_key_cipher_virt`接口使用密钥。
 OEM OTP的相关特性说明，见`Rockchip_Developer_Guide_OTP_CN`文档。
 
 **参数**
 
 - [in] key_id - 将要设置的key_id，支持`RK_OEM_OTP_KEY0 - 3`
 
-### rk_oem_otp_key_cipher
+### rk_oem_otp_key_cipher_virt
 
 ```c
-RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *config,
-                             uint8_t *src, uint8_t *dst, uint32_t len);
+RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *config,
+                                  uint8_t *src, uint8_t *dst, uint32_t len);
 ```
 
 **功能**
