@@ -41,7 +41,7 @@ static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 	};
 	struct drm_rockchip_gem_map_off map_req;
 
-	node = malloc(size);
+	node = malloc(sizeof(*node));
 	if (!node)
 		goto error;
 
