@@ -13,6 +13,7 @@ LOCAL_SRC_FILES += $(SRC_FILES_DIR:$(LOCAL_PATH)/%=%)
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../include \
 		$(LOCAL_PATH)/include \
+		$(LOCAL_PATH)/include/c_mode \
 
 LOCAL_LDFLAGS += -lrkcrypto
 
