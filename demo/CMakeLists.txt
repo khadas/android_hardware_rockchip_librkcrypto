@@ -1,2 +1,0 @@
-add_executable(librkcrypto_demo rk_demo.c)
-target_link_libraries(librkcrypto_demo rkcrypto)

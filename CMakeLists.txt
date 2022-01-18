@@ -63,6 +63,4 @@ add_library(rkcrypto SHARED ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
 add_library(rkcrypto_static STATIC ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
 SET_TARGET_PROPERTIES (rkcrypto_static PROPERTIES OUTPUT_NAME "rkcrypto")
 
-add_subdirectory(demo)
-
 add_subdirectory(test)

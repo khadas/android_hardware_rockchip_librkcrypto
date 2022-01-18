@@ -7,7 +7,6 @@ collect_bin()
 	cp $BUILD_DIR/librkcrypto.so $TARGET_LIB_DIR
 	cp $BUILD_DIR/librkcrypto.a $TARGET_LIB_DIR
 	cp $BUILD_DIR/test/librkcrypto_test $TARGET_BIN_DIR
-	cp $BUILD_DIR/demo/librkcrypto_demo $TARGET_BIN_DIR
 	echo "copy target files to $TARGET_LIB_DIR success"
 
 	# export head files
