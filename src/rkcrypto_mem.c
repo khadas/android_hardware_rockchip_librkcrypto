@@ -17,6 +17,8 @@
 #include "rk_list.h"
 
 #define DRM_MODULE_NAME "rockchip"
+#define DRM_CARD_PATH "/dev/dri/card0"
+
 #define IS_DRM_INVALID()	(drm_fd < 0)
 
 struct mem_pool_node {
@@ -132,7 +134,7 @@ int rk_crypto_mem_init(void)
 
 	INIT_LIST_HEAD(&mem_pool_list);
 
-	drm_fd = drmOpen(DRM_MODULE_NAME, NULL);
+	drm_fd = open(DRM_CARD_PATH, O_RDWR);
 	if (drm_fd < 0) {
 		fprintf(stderr, "failed to open drm !\n");
 		goto exit;
@@ -169,7 +171,7 @@ void rk_crypto_mem_deinit(void)
 	}
 
 	if (drm_fd >= 0)
-		drmClose(drm_fd);
+		close(drm_fd);
 exit:
 	pthread_mutex_unlock(&drm_mutex);
 }
