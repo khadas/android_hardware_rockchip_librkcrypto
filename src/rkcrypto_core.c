@@ -305,6 +305,7 @@ void rk_crypto_deinit(void)
 		pthread_mutex_unlock(&sess_mutex);
 
 		close(cryptodev_fd);
+		cryptodev_fd = -1;
 		rk_crypto_mem_deinit();
 
 	}
