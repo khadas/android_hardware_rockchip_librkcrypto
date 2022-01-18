@@ -5,6 +5,7 @@ set -e
 collect_bin()
 {
 	cp $BUILD_DIR/librkcrypto.so $TARGET_DIR
+	cp $BUILD_DIR/librkcrypto.a $TARGET_DIR
 	cp $BUILD_DIR/test/librkcrypto_test $TARGET_DIR
 	cp $BUILD_DIR/demo/librkcrypto_demo $TARGET_DIR
 	echo "copy target files to $TARGET_DIR success"
