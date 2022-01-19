@@ -259,7 +259,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 
 				res = rk_cipher_init(&cipher_cfg, &cipher_hdl);
 				if (res) {
-					printf("virt  : [%s-%u] %-8s%-8s N/A\n",
+					printf("dma_fd : [%s-%u] %-8s%-8s N/A\n",
 					       test_algo_name(algo), key_len * 8,
 					       test_mode_name(mode), test_op_name(operation));
 					continue;
@@ -268,7 +268,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 				res = rk_cipher_crypt(cipher_hdl, plain->dma_fd, data_len,
 						      cipher_hard->dma_fd, &out_len);
 				if (res) {
-					E_TRACE("rk_cipher_crypt_virt error[%x]\n", res);
+					E_TRACE("rk_cipher_crypt error[%x]\n", res);
 					goto exit;
 				}
 
@@ -282,7 +282,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 
 				/* Verify the result */
 				if (memcmp(cipher_hard->vaddr, cipher_soft->vaddr, data_len) != 0) {
-					E_TRACE("rkcrypto_test_cipher_virt compare failed.\n");
+					E_TRACE("rkcrypto_test_cipher compare failed.\n");
 					test_dump_hex("cipher_hard", cipher_hard->vaddr, data_len);
 					test_dump_hex("cipher_soft", cipher_soft->vaddr, data_len);
 					res = RK_ALG_ERR_GENERIC;
