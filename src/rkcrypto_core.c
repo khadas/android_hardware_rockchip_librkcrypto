@@ -13,8 +13,9 @@
 #include "rk_cryptodev.h"
 #include "rkcrypto_mem.h"
 #include "rkcrypto_core.h"
-#include "rk_list.h"
+#include "rkcrypto_core_int.h"
 #include "rkcrypto_trace.h"
+#include "rk_list.h"
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -602,3 +603,16 @@ exit:
 	return res;
 }
 
+RK_RES rk_crypto_fd_ioctl(uint32_t request, struct crypt_fd_map_op *mop)
+{
+	RK_ALG_CHECK_PARAM(request != RIOCCRYPT_FD_MAP &&
+			   request != RIOCCRYPT_FD_UNMAP);
+	RK_ALG_CHECK_PARAM(!mop);
+
+	if (ioctl(cryptodev_fd, request, mop)) {
+		E_TRACE("ioctl cryptodev_fd failed!");
+		return RK_ALG_ERR_GENERIC;
+	}
+
+	return RK_ALG_SUCCESS;
+}
