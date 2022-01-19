@@ -1,32 +1,30 @@
 #/bin/bash
 
-clear_out()
-{
-	echo "clear out directories"
-	rm -rf $SCRPIT_DIR/out
-	mkdir -p $SCRPIT_DIR/out/tmp
-}
+set -e
 
 collect_bin()
 {
-	TARGET_DIR=$SCRPIT_DIR/out/target/$ARM_BIT/
-	mkdir -p $TARGET_DIR
-	cp $SCRPIT_DIR/out/tmp/librkcrypto.so $TARGET_DIR
-	cp $SCRPIT_DIR/out/tmp/test/librkcrypto_test $TARGET_DIR
-	cp $SCRPIT_DIR/out/tmp/demo/librkcrypto_demo $TARGET_DIR
+	cp $BUILD_DIR/librkcrypto.so $TARGET_DIR
+	cp $BUILD_DIR/librkcrypto.a $TARGET_DIR
+	cp $BUILD_DIR/test/librkcrypto_test $TARGET_DIR
+	cp $BUILD_DIR/demo/librkcrypto_demo $TARGET_DIR
+	echo "copy target files to $TARGET_DIR success"
 }
 
 build()
 {
-	echo "build $ARM_BIT binaries"
-	cd $SCRPIT_DIR/out/tmp/
-	cmake $SCRPIT_DIR $DBUILD
-	make
+	echo "build $ARM_BIT libraries and binaries"
+	TARGET_DIR=$SCRIPT_DIR/out/target/$ARM_BIT/
+	BUILD_DIR=$SCRIPT_DIR/out/build/$ARM_BIT/
+	mkdir -p $TARGET_DIR
+	mkdir -p $BUILD_DIR
+	cd $BUILD_DIR
+	cmake $SCRIPT_DIR $DBUILD
+	make -j12
 }
 
 BUILD_PARA="$1"
-SCRPIT_DIR=$(pwd)
-clear_out
+SCRIPT_DIR=$(pwd)
 
 if [ $# -eq 0 ]; then
 	# build both 32-bit and 64-bit
@@ -37,7 +35,6 @@ if [ $# -eq 0 ]; then
 
 	DBUILD="-DBUILD=64"
 	ARM_BIT="arm64"
-	rm -rf $SCRPIT_DIR/out/tmp/*
 	build
 	collect_bin
 else

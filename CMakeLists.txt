@@ -56,7 +56,12 @@ file(GLOB SOURCES_TEEC
 	${TEEC_PATH}/src/tee_client_api.c
 	${TEEC_PATH}/src/teec_trace.c)
 
+# build shared library
 add_library(rkcrypto SHARED ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
+
+# build static library
+add_library(rkcrypto_static STATIC ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
+SET_TARGET_PROPERTIES (rkcrypto_static PROPERTIES OUTPUT_NAME "rkcrypto")
 
 add_subdirectory(demo)
 
