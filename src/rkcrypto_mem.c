@@ -45,15 +45,15 @@ static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 
 	node = malloc(sizeof(*node));
 	if (!node)
-		goto error;
+		return NULL;
 
 	memset(node, 0x00, sizeof(*node));
 	memset(&map_req, 0x00, sizeof(map_req));
 
 	ret = drmIoctl(drm_fd, DRM_IOCTL_ROCKCHIP_GEM_CREATE, &req);
 	if (ret) {
-		fprintf(stderr, "failed to create gem object.\n");
-		goto error;
+		free(node);
+		return NULL;
 	}
 
 	ret = drmPrimeHandleToFD(drm_fd, req.handle, 0, &node->mem.dma_fd);
@@ -88,8 +88,7 @@ static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 
 	return node;
 error:
-	if (req.handle)
-		drmIoctl(drm_fd, DRM_IOCTL_GEM_CLOSE, &req);
+	drmIoctl(drm_fd, DRM_IOCTL_GEM_CLOSE, &req);
 
 	if (node)
 		free(node);
@@ -99,21 +98,19 @@ error:
 
 static void crypto_free_node(struct mem_pool_node *node)
 {
-	struct drm_rockchip_gem_create req;
+	struct drm_gem_close req;
 
-	if (node->mem.size == 0)
+	if (!node || node->mem.size == 0)
 		return;
 
 	memset(&req, 0x00, sizeof(req));
 
 	req.handle = node->handle;
-	req.flags  = node->flags;
-	req.size   = node->mem.size;
 
 	if (node->mem.vaddr)
 		munmap(node->mem.vaddr, node->mem.size);
 
-	if (node->mem.dma_fd)
+	if (node->mem.dma_fd >= 0)
 		close(node->mem.dma_fd);
 
 	drmIoctl(drm_fd, DRM_IOCTL_GEM_CLOSE, &req);
