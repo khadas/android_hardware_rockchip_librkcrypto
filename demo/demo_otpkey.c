@@ -6,7 +6,7 @@
 #include "rkcrypto_core.h"
 #include "rkcrypto_mem.h"
 #include "rkcrypto_otp_key.h"
-#include "rk_demo.h"
+#include "rkcrypto_demo.h"
 
 static uint8_t otp_key_0[32] = {
 	0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,

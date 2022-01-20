@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
-#include "rk_demo.h"
+#include "rkcrypto_demo.h"
 
 static void guide(void)
 {

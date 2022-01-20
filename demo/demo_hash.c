@@ -5,7 +5,7 @@
 #include <string.h>
 #include "rkcrypto_core.h"
 #include "rkcrypto_mem.h"
-#include "rk_demo.h"
+#include "rkcrypto_demo.h"
 
 #define HASH_MAX_LEN	64
 static uint8_t input[16] = {
