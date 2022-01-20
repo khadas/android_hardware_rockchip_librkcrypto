@@ -2,8 +2,8 @@
  * Copyright (c) 2022 Rockchip Electronics Co. Ltd.
  */
 #include <string.h>
-#include "otp_key_crypto.h"
 #include "rkcrypto_core_int.h"
+#include "rkcrypto_otp_key.h"
 #include "rkcrypto_trace.h"
 #include "tee_client_api.h"
 

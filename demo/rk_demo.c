@@ -3,8 +3,8 @@
  */
 #include <stdio.h>
 #include <string.h>
-#include "librkcrypto.h"
 #include "rkcrypto_common.h"
+#include "rkcrypto_otp_key.h"
 
 int main(void)
 {

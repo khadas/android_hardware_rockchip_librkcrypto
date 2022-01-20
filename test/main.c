@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
-#include "librkcrypto.h"
 #include "test_otp_key_crypto.h"
 #include "test_cipher.h"
 #include "test_hash.h"

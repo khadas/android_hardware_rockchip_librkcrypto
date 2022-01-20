@@ -4,7 +4,6 @@
 
 #include "c_model.h"
 #include "cmode_adapter.h"
-#include "librkcrypto.h"
 
 RK_RES soft_cipher(uint32_t algo, uint32_t mode, uint32_t operation,
 		   uint8_t *key, uint32_t key_len, uint8_t *iv,

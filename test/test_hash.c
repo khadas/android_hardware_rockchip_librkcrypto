@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "rkcrypto_common.h"
+#include "rkcrypto_core.h"
+#include "rkcrypto_mem.h"
 #include "rkcrypto_trace.h"
 #include "cmode_adapter.h"
-#include "librkcrypto.h"
 #include "test_hash.h"
 #include "test_utils.h"
 

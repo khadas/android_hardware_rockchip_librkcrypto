@@ -1,8 +1,8 @@
 /*
  * Copyright (c) 2022 Rockchip Electronics Co. Ltd.
  */
-#ifndef _OTP_KEY_CRYPTO_H_
-#define _OTP_KEY_CRYPTO_H_
+#ifndef _RKCRYPTO_OTP_KEY_H_
+#define _RKCRYPTO_OTP_KEY_H_
 
 #include "rkcrypto_common.h"
 
@@ -14,4 +14,4 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *config,
 			     int32_t in_fd, int32_t out_fd, uint32_t len);
 
-#endif /* _OTP_KEY_CRYPTO_H_ */
+#endif /* _RKCRYPTO_OTP_KEY_H_ */
