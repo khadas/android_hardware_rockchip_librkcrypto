@@ -14,6 +14,7 @@
 #include <pthread.h>
 
 #include "rkcrypto_mem.h"
+#include "rkcrypto_trace.h"
 #include "rk_list.h"
 
 #define DRM_MODULE_NAME "rockchip"
@@ -58,14 +59,14 @@ static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 
 	ret = drmPrimeHandleToFD(drm_fd, req.handle, 0, &node->mem.dma_fd);
 	if (ret) {
-		fprintf(stderr, "failed to get dma fd.\n");
+		E_TRACE("failed to get dma fd.\n");
 		goto error;
 	}
 
 	map_req.handle = req.handle;
 	ret = drmIoctl(drm_fd, DRM_IOCTL_ROCKCHIP_GEM_MAP_OFFSET, &map_req);
 	if (ret) {
-		fprintf(stderr, "failed to ioctl gem map offset.");
+		E_TRACE("failed to ioctl gem map offset.");
 		goto error;
 	}
 
@@ -77,7 +78,7 @@ static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 				 drm_fd, map_req.offset);
 #endif
 	if (node->mem.vaddr == MAP_FAILED) {
-		fprintf(stderr, "failed to mmap buffer.error = %d\n", errno);
+		E_TRACE("failed to mmap buffer.error = %d\n", errno);
 		ret = -1;
 		goto error;
 	}
@@ -133,7 +134,7 @@ int rk_crypto_mem_init(void)
 
 	drm_fd = open(DRM_CARD_PATH, O_RDWR);
 	if (drm_fd < 0) {
-		fprintf(stderr, "failed to open drm !\n");
+		E_TRACE("failed to open drm !\n");
 		goto exit;
 	}
 
