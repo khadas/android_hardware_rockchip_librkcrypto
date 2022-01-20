@@ -25,7 +25,8 @@ int main(int argc, char *argv[])
 	uint32_t opt = 0;
 	const char *opt_string = "abcdefgh";
 
-	guide();
+	if (argc < 2)
+		guide();
 
 	while ((opt = getopt(argc, argv, opt_string)) != -1) {
 		switch (opt) {
