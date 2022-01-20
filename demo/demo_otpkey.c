@@ -31,7 +31,7 @@ static uint32_t mode = RK_CIPHER_MODE_CBC;
 
 RK_RES demo_otpkey(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	rk_cipher_config config;
 	uint32_t key_id = RK_OEM_OTP_KEY0;
 	uint32_t key_len = 16;
@@ -55,14 +55,14 @@ RK_RES demo_otpkey(void)
 	in = rk_crypto_mem_alloc(len);
 	if (!in) {
 		printf("malloc %uByte error!\n", len);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
 	out = rk_crypto_mem_alloc(len);
 	if (!out) {
 		printf("malloc %uByte error!\n", len);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -82,7 +82,7 @@ RK_RES demo_otpkey(void)
 
 	if (memcmp(out->vaddr, expected_enc, len)) {
 		printf("ENC result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -98,7 +98,7 @@ RK_RES demo_otpkey(void)
 
 	if (memcmp(out->vaddr, input, len)) {
 		printf("ENC result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -115,7 +115,7 @@ exit:
 
 RK_RES demo_otpkey_virt(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	rk_cipher_config config;
 	uint32_t key_id = RK_OEM_OTP_KEY0;
 	uint32_t key_len = 16;
@@ -146,7 +146,7 @@ RK_RES demo_otpkey_virt(void)
 
 	if (memcmp(output, expected_enc, data_len)) {
 		printf("ENC result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -162,7 +162,7 @@ RK_RES demo_otpkey_virt(void)
 
 	if (memcmp(output, input, data_len)) {
 		printf("DEC result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 

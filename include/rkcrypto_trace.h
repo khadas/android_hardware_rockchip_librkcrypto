@@ -17,11 +17,11 @@
 #define E_TRACE(fmt,...) \
 	printf("RKCRYPTO E[%s, %d]: "fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
 
-#define RK_ALG_CHECK_PARAM(_val)\
+#define RK_CRYPTO_CHECK_PARAM(_val)\
 	do {\
 		if (_val) {\
-			E_TRACE("RK_ALG_CHECK_PARAM ERR! 0x%08x", RK_ALG_ERR_PARAMETER);\
-			return RK_ALG_ERR_PARAMETER;\
+			E_TRACE("RK_CRYPTO_CHECK_PARAM ERR! 0x%08x", RK_CRYPTO_ERR_PARAMETER);\
+			return RK_CRYPTO_ERR_PARAMETER;\
 		}\
 	} while (0)
 

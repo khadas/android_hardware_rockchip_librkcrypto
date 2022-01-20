@@ -42,7 +42,7 @@ static struct test_hash_item test_hmac_tbl[] = {
 static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 				  uint8_t *buffer, uint32_t buffer_len, bool is_hmac)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t data_block = 128;
 	uint32_t out_len, tmp_len;
 	uint8_t hash_soft[HASH_MAX_LEN], hash_hard[HASH_MAX_LEN];
@@ -74,7 +74,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 	res = rk_hash_init(&hash_cfg, &hash_hdl);
 	if (res) {
 		printf("virt  : [%-10s]\t: N/A\n", test_algo_name(algo));
-		return RK_ALG_SUCCESS;
+		return RK_CRYPTO_SUCCESS;
 	}
 
 	tmp_len  = buffer_len;
@@ -117,7 +117,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 		E_TRACE("test_%s_item_virt compare failed.\n", test_name);
 		test_dump_hex("hash_hard", hash_hard, out_len);
 		test_dump_hex("hash_soft", hash_soft, out_len);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -125,7 +125,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 	hash_hdl = 0;
 	printf("virt  : [%-10s]\t: PASS\n", test_algo_name(algo));
 
-	res = RK_ALG_SUCCESS;
+	res = RK_CRYPTO_SUCCESS;
 exit:
 	if (res)
 		printf("virt  : [%-10s]\t: FAIL\n", test_algo_name(algo));
@@ -136,7 +136,7 @@ exit:
 static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 				rk_crypto_mem *buffer, bool is_hmac)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t out_len;
 	uint8_t hash_soft[HASH_MAX_LEN], hash_hard[HASH_MAX_LEN];
 	uint8_t key[MAX_HASH_BLOCK_SIZE];
@@ -166,7 +166,7 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 	res = rk_hash_init(&hash_cfg, &hash_hdl);
 	if (res) {
 		printf("dma_fd: [%-10s]\t: N/A\n", test_algo_name(algo));
-		return RK_ALG_SUCCESS;
+		return RK_CRYPTO_SUCCESS;
 	}
 
 	res = rk_hash_update(hash_hdl, buffer->dma_fd, buffer->size, true);
@@ -193,7 +193,7 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 		test_dump_hex("buffer", buffer->vaddr, buffer->size);
 		test_dump_hex("hash_hard", hash_hard, out_len);
 		test_dump_hex("hash_soft", hash_soft, out_len);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -201,7 +201,7 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 	hash_hdl = 0;
 	printf("dma_fd: [%-10s]\t: PASS\n", test_algo_name(algo));
 
-	res = RK_ALG_SUCCESS;
+	res = RK_CRYPTO_SUCCESS;
 exit:
 	if (res)
 		printf("dma_fd: [%-10s]\t: FAIL\n", test_algo_name(algo));
@@ -211,7 +211,7 @@ exit:
 
 RK_RES test_hash(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint8_t *buffer = NULL;
 	uint32_t buffer_len = TEST_DATA_MAX;
 	rk_crypto_mem *mem_buf = NULL;
@@ -250,7 +250,7 @@ exit:
 
 RK_RES test_hmac(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint8_t *buffer = NULL;
 	uint32_t buffer_len = TEST_DATA_MAX;
 	rk_crypto_mem *mem_buf = NULL;

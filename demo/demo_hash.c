@@ -39,7 +39,7 @@ static uint32_t hmac_algo = RK_ALGO_HMAC_SHA256;
 
 RK_RES demo_hash(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	rk_hash_config hash_cfg;
 	rk_handle hash_hdl = 0;
 	uint32_t data_len = sizeof(input);
@@ -57,7 +57,7 @@ RK_RES demo_hash(void)
 	in = rk_crypto_mem_alloc(data_len);
 	if (!in) {
 		printf("malloc %uByte error!\n", data_len);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -82,7 +82,7 @@ RK_RES demo_hash(void)
 	/* Verify the result */
 	if (memcmp(output, expected_hash, out_len) != 0) {
 		printf("HASH result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -98,7 +98,7 @@ exit:
 
 RK_RES demo_hash_virt(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	rk_hash_config hash_cfg;
 	uint8_t output[HASH_MAX_LEN];
 	uint32_t data_len = sizeof(input);
@@ -149,7 +149,7 @@ RK_RES demo_hash_virt(void)
 
 	if (memcmp(output, expected_hash, out_len) != 0) {
 		printf("HASH result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -162,7 +162,7 @@ exit:
 
 RK_RES demo_hmac(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	rk_hash_config hash_cfg;
 	rk_handle hash_hdl = 0;
 	uint32_t data_len = sizeof(input);
@@ -180,7 +180,7 @@ RK_RES demo_hmac(void)
 	in = rk_crypto_mem_alloc(data_len);
 	if (!in) {
 		printf("malloc %uByte error!\n", data_len);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -207,7 +207,7 @@ RK_RES demo_hmac(void)
 	/* Verify the result */
 	if (memcmp(output, expected_hmac, out_len) != 0) {
 		printf("HMAC result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -223,7 +223,7 @@ exit:
 
 RK_RES demo_hmac_virt(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	rk_hash_config hash_cfg;
 	uint8_t output[HASH_MAX_LEN];
 	uint32_t data_len = sizeof(input);
@@ -276,7 +276,7 @@ RK_RES demo_hmac_virt(void)
 
 	if (memcmp(output, expected_hmac, out_len) != 0) {
 		printf("HASH result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 

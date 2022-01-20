@@ -27,7 +27,7 @@ RK_RES soft_cipher(uint32_t algo, uint32_t mode, uint32_t operation,
 			ret = rk_des_ofb_encrypt(in, out, in_len, key, key_len, iv, is_enc);
 			break;
 		default:
-			return RK_ALG_ERR_PARAMETER;
+			return RK_CRYPTO_ERR_PARAMETER;
 		}
 	} else if (algo == RK_ALGO_AES) {
 		switch (mode) {
@@ -50,7 +50,7 @@ RK_RES soft_cipher(uint32_t algo, uint32_t mode, uint32_t operation,
 			ret = rk_aes_ctr_encrypt(in, out, in_len, key, key_len, iv, is_enc);
 			break;
 		default:
-			return RK_ALG_ERR_PARAMETER;
+			return RK_CRYPTO_ERR_PARAMETER;
 		}
 	} else if (algo == RK_ALGO_SM4) {
 		switch (mode) {
@@ -73,14 +73,14 @@ RK_RES soft_cipher(uint32_t algo, uint32_t mode, uint32_t operation,
 			ret = rk_sm4_ctr_encrypt(in, out, in_len, key, key_len, iv, is_enc);
 			break;
 		default:
-			return RK_ALG_ERR_PARAMETER;
+			return RK_CRYPTO_ERR_PARAMETER;
 		}
 
 	} else {
-		return RK_ALG_ERR_PARAMETER;
+		return RK_CRYPTO_ERR_PARAMETER;
 	}
 
-	return ret == 0 ? RK_ALG_SUCCESS : RK_ALG_ERR_GENERIC;
+	return ret == 0 ? RK_CRYPTO_SUCCESS : RK_CRYPTO_ERR_GENERIC;
 }
 
 RK_RES soft_hash(uint32_t algo, const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len)
@@ -116,10 +116,10 @@ RK_RES soft_hash(uint32_t algo, const uint8_t *in, uint32_t in_len, uint8_t *out
 		ret = rk_hash_sm3(in, in_len, out, out_len);
 		break;
 	default:
-		return RK_ALG_ERR_PARAMETER;
+		return RK_CRYPTO_ERR_PARAMETER;
 	}
 
-	return ret == 0 ? RK_ALG_SUCCESS : RK_ALG_ERR_GENERIC;
+	return ret == 0 ? RK_CRYPTO_SUCCESS : RK_CRYPTO_ERR_GENERIC;
 }
 
 RK_RES soft_hmac(uint32_t algo, const uint8_t *key, uint32_t key_len,
@@ -144,9 +144,9 @@ RK_RES soft_hmac(uint32_t algo, const uint8_t *key, uint32_t key_len,
 		ret = rk_hmac_sm3(key, key_len, in, in_len, out, out_len);
 		break;
 	default:
-		return RK_ALG_ERR_PARAMETER;
+		return RK_CRYPTO_ERR_PARAMETER;
 	}
 
-	return ret == 0 ? RK_ALG_SUCCESS : RK_ALG_ERR_GENERIC;
+	return ret == 0 ? RK_CRYPTO_SUCCESS : RK_CRYPTO_ERR_GENERIC;
 }
 

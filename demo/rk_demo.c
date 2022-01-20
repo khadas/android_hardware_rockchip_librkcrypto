@@ -21,7 +21,7 @@ static void guide(void)
 
 int main(int argc, char *argv[])
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t opt = 0;
 	const char *opt_string = "abcdefgh";
 

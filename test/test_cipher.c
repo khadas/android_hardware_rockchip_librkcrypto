@@ -82,7 +82,7 @@ static struct test_cipher_item test_item_tbl[] = {
 
 static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t i, j, k;
 	uint32_t ops[] = {RK_OP_CIPHER_ENC, RK_OP_CIPHER_DEC};
 	uint32_t data_len = TEST_DATA_MAX, out_len;
@@ -168,7 +168,7 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 					E_TRACE("rkcrypto_test_cipher_virt compare failed.\n");
 					test_dump_hex("cipher_hard", cipher_hard, data_len);
 					test_dump_hex("cipher_soft", cipher_soft, data_len);
-					res = RK_ALG_ERR_GENERIC;
+					res = RK_CRYPTO_ERR_GENERIC;
 					goto exit;
 				}
 
@@ -181,7 +181,7 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 		}
 	}
 
-	res = RK_ALG_SUCCESS;
+	res = RK_CRYPTO_SUCCESS;
 exit:
 	if (plain)
 		free(plain);
@@ -202,7 +202,7 @@ exit:
 
 static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t i, j, k;
 	uint32_t ops[] = {RK_OP_CIPHER_ENC, RK_OP_CIPHER_DEC};
 	uint32_t data_len = TEST_DATA_MAX, out_len;
@@ -285,7 +285,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 					E_TRACE("rkcrypto_test_cipher compare failed.\n");
 					test_dump_hex("cipher_hard", cipher_hard->vaddr, data_len);
 					test_dump_hex("cipher_soft", cipher_soft->vaddr, data_len);
-					res = RK_ALG_ERR_GENERIC;
+					res = RK_CRYPTO_ERR_GENERIC;
 					goto exit;
 				}
 
@@ -298,7 +298,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 		}
 	}
 
-	res = RK_ALG_SUCCESS;
+	res = RK_CRYPTO_SUCCESS;
 exit:
 	rk_crypto_mem_free(plain);
 	rk_crypto_mem_free(cipher_soft);
@@ -314,7 +314,7 @@ exit:
 
 RK_RES test_cipher(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t i;
 
 	rk_crypto_init();

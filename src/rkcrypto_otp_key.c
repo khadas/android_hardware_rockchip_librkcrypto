@@ -28,22 +28,22 @@ RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 	TEEC_UUID uuid = STORAGE_UUID;
 	uint32_t error_origin = 0;
 
-	RK_ALG_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
+	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
 			   key_id != RK_OEM_OTP_KEY1 &&
 			   key_id != RK_OEM_OTP_KEY2 &&
 			   key_id != RK_OEM_OTP_KEY3 &&
 			   key_id != RK_OEM_OTP_KEY_FW);
-	RK_ALG_CHECK_PARAM(!key);
-	RK_ALG_CHECK_PARAM(key_len != 16 &&
+	RK_CRYPTO_CHECK_PARAM(!key);
+	RK_CRYPTO_CHECK_PARAM(key_len != 16 &&
 			   key_len != 24 &&
 			   key_len != 32);
-	RK_ALG_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
+	RK_CRYPTO_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
 			   key_len != 16);
 
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		return res;
 	}
 
@@ -52,7 +52,7 @@ RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto out;
 	}
 
@@ -70,7 +70,7 @@ RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 	}
 
 	TEEC_CloseSession(&session);
@@ -88,17 +88,17 @@ RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_writt
 	TEEC_UUID uuid = STORAGE_UUID;
 	uint32_t error_origin = 0;
 
-	RK_ALG_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
+	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
 			   key_id != RK_OEM_OTP_KEY1 &&
 			   key_id != RK_OEM_OTP_KEY2 &&
 			   key_id != RK_OEM_OTP_KEY3 &&
 			   key_id != RK_OEM_OTP_KEY_FW);
-	RK_ALG_CHECK_PARAM(!is_written);
+	RK_CRYPTO_CHECK_PARAM(!is_written);
 
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		return res;
 	}
 
@@ -107,7 +107,7 @@ RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_writt
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto out;
 	}
 
@@ -122,11 +122,11 @@ RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_writt
 				 &operation, &error_origin);
 	if (res == TEEC_ERROR_ACCESS_DENIED) {
 		E_TRACE("Check if it has been set oem_hr_otp_read_lock!");
-		res = RK_ALG_ERR_ACCESS_DENIED;
+		res = RK_CRYPTO_ERR_ACCESS_DENIED;
 	} else if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 	} else {
 		*is_written = operation.params[0].value.b;
 	}
@@ -147,7 +147,7 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id)
 	TEEC_UUID uuid = STORAGE_UUID;
 	uint32_t error_origin = 0;
 
-	RK_ALG_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
+	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
 			   key_id != RK_OEM_OTP_KEY1 &&
 			   key_id != RK_OEM_OTP_KEY2 &&
 			   key_id != RK_OEM_OTP_KEY3);
@@ -155,7 +155,7 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id)
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		return res;
 	}
 
@@ -164,7 +164,7 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id)
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto out;
 	}
 
@@ -180,7 +180,7 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id)
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 	}
 
 	TEEC_CloseSession(&session);
@@ -200,30 +200,30 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	uint32_t error_origin = 0;
 	TEEC_SharedMemory sm;
 
-	RK_ALG_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
+	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
 			   key_id != RK_OEM_OTP_KEY1 &&
 			   key_id != RK_OEM_OTP_KEY2 &&
 			   key_id != RK_OEM_OTP_KEY3 &&
 			   key_id != RK_OEM_OTP_KEY_FW);
-	RK_ALG_CHECK_PARAM(!config  || !src || !dst);
-	RK_ALG_CHECK_PARAM(config->algo != RK_ALGO_AES &&
+	RK_CRYPTO_CHECK_PARAM(!config  || !src || !dst);
+	RK_CRYPTO_CHECK_PARAM(config->algo != RK_ALGO_AES &&
 			   config->algo != RK_ALGO_SM4);
-	RK_ALG_CHECK_PARAM(config->mode >= RK_CIPHER_MODE_XTS);
-	RK_ALG_CHECK_PARAM(config->operation != RK_MODE_ENCRYPT &&
+	RK_CRYPTO_CHECK_PARAM(config->mode >= RK_CIPHER_MODE_XTS);
+	RK_CRYPTO_CHECK_PARAM(config->operation != RK_MODE_ENCRYPT &&
 			   config->operation != RK_MODE_DECRYPT);
-	RK_ALG_CHECK_PARAM(config->key_len != 16 &&
+	RK_CRYPTO_CHECK_PARAM(config->key_len != 16 &&
 			   config->key_len != 24 &&
 			   config->key_len != 32);
-	RK_ALG_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
+	RK_CRYPTO_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
 			   config->key_len != 16);
-	RK_ALG_CHECK_PARAM(len % AES_BLOCK_SIZE ||
+	RK_CRYPTO_CHECK_PARAM(len % AES_BLOCK_SIZE ||
 			   len > RK_CRYPTO_MAX_DATA_LEN ||
 			   len == 0);
 
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		return res;
 	}
 
@@ -232,7 +232,7 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto out;
 	}
 
@@ -241,7 +241,7 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	res = TEEC_AllocateSharedMemory(&contex, &sm);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("AllocateSharedMemory ERR! TEEC res= 0x%x", res);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto out1;
 	}
 
@@ -265,7 +265,7 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 	} else {
 		memcpy(dst, sm.buffer, sm.size);
 	}
@@ -292,25 +292,25 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	struct crypt_fd_map_op src_mop;
 	struct crypt_fd_map_op dst_mop;
 
-	RK_ALG_CHECK_PARAM(in_fd < 0);
-	RK_ALG_CHECK_PARAM(out_fd < 0);
-	RK_ALG_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
+	RK_CRYPTO_CHECK_PARAM(in_fd < 0);
+	RK_CRYPTO_CHECK_PARAM(out_fd < 0);
+	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
 			   key_id != RK_OEM_OTP_KEY1 &&
 			   key_id != RK_OEM_OTP_KEY2 &&
 			   key_id != RK_OEM_OTP_KEY3 &&
 			   key_id != RK_OEM_OTP_KEY_FW);
-	RK_ALG_CHECK_PARAM(!config);
-	RK_ALG_CHECK_PARAM(config->algo != RK_ALGO_AES &&
+	RK_CRYPTO_CHECK_PARAM(!config);
+	RK_CRYPTO_CHECK_PARAM(config->algo != RK_ALGO_AES &&
 			   config->algo != RK_ALGO_SM4);
-	RK_ALG_CHECK_PARAM(config->mode >= RK_CIPHER_MODE_XTS);
-	RK_ALG_CHECK_PARAM(config->operation != RK_MODE_ENCRYPT &&
+	RK_CRYPTO_CHECK_PARAM(config->mode >= RK_CIPHER_MODE_XTS);
+	RK_CRYPTO_CHECK_PARAM(config->operation != RK_MODE_ENCRYPT &&
 			   config->operation != RK_MODE_DECRYPT);
-	RK_ALG_CHECK_PARAM(config->key_len != 16 &&
+	RK_CRYPTO_CHECK_PARAM(config->key_len != 16 &&
 			   config->key_len != 24 &&
 			   config->key_len != 32);
-	RK_ALG_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
+	RK_CRYPTO_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
 			   config->key_len != 16);
-	RK_ALG_CHECK_PARAM(len % AES_BLOCK_SIZE || len == 0);
+	RK_CRYPTO_CHECK_PARAM(len % AES_BLOCK_SIZE || len == 0);
 
 	memset(&src_mop, 0, sizeof(src_mop));
 	memset(&dst_mop, 0, sizeof(dst_mop));
@@ -332,7 +332,7 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto out1;
 	}
 
@@ -341,7 +341,7 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto out2;
 	}
 
@@ -363,7 +363,7 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 	}
 
 	TEEC_CloseSession(&session);

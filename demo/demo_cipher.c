@@ -28,7 +28,7 @@ static uint32_t mode = RK_CIPHER_MODE_CBC;
 
 RK_RES demo_cipher(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	rk_cipher_config config;
 	uint32_t key_len = sizeof(key_0);
 	uint32_t data_len = sizeof(input);
@@ -46,14 +46,14 @@ RK_RES demo_cipher(void)
 	in = rk_crypto_mem_alloc(data_len);
 	if (!in) {
 		printf("malloc %uByte error!\n", data_len);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
 	out = rk_crypto_mem_alloc(data_len);
 	if (!out) {
 		printf("malloc %uByte error!\n", data_len);
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -82,7 +82,7 @@ RK_RES demo_cipher(void)
 
 	if (memcmp(out->vaddr, expected_enc, out_len)) {
 		printf("ENC result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -106,7 +106,7 @@ RK_RES demo_cipher(void)
 
 	if (memcmp(out->vaddr, input, data_len)) {
 		printf("DEC result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -123,7 +123,7 @@ exit:
 
 RK_RES demo_cipher_virt(void)
 {
-	RK_RES res = RK_ALG_ERR_GENERIC;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	rk_cipher_config config;
 	uint32_t key_len = sizeof(key_0);
 	uint8_t output[16];
@@ -162,7 +162,7 @@ RK_RES demo_cipher_virt(void)
 
 	if (memcmp(output, expected_enc, out_len)) {
 		printf("ENC result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -186,7 +186,7 @@ RK_RES demo_cipher_virt(void)
 
 	if (memcmp(output, input, data_len)) {
 		printf("DEC result not equal to expected value, error!\n");
-		res = RK_ALG_ERR_GENERIC;
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
