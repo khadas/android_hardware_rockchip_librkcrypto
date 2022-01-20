@@ -120,7 +120,10 @@ RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_writt
 
 	res = TEEC_InvokeCommand(&session, STORAGE_CMD_OEM_OTP_KEY_IS_WRITTEN,
 				 &operation, &error_origin);
-	if (res != TEEC_SUCCESS) {
+	if (res == TEEC_ERROR_ACCESS_DENIED) {
+		E_TRACE("Check if it has been set oem_hr_otp_read_lock!");
+		res = RK_ALG_ERR_ACCESS_DENIED;
+	} else if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
 		res = RK_ALG_ERR_GENERIC;

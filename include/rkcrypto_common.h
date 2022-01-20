@@ -17,6 +17,7 @@ typedef uint32_t rk_handle;
 #define RK_ALG_ERR_STATE		0xF0000002
 #define RK_ALG_ERR_NOT_SUPPORTED	0xF0000003
 #define RK_ALG_ERR_OUT_OF_MEMORY	0xF0000004
+#define RK_ALG_ERR_ACCESS_DENIED	0xF0000005
 
 /* Algorithm operation */
 #define RK_MODE_ENCRYPT			1
