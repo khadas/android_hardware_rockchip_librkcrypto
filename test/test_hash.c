@@ -12,7 +12,7 @@
 #include "test_utils.h"
 
 #define HASH_MAX_LEN	64
-#define TEST_DATA_MAX	256
+#define TEST_DATA_MAX	(1024 * 1024)
 
 struct test_hash_item {
 	uint32_t algo;
@@ -85,7 +85,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 			res = rk_hash_update_virt(hash_hdl, tmp_data, data_block, false);
 			if (res) {
 				E_TRACE("rk_hash_update_virt[%lu/%u] error = %d\n",
-					tmp_data - buffer, tmp_len, res);
+					(unsigned long)(tmp_data - buffer), tmp_len, res);
 				goto exit;
 			}
 		} else {
@@ -93,7 +93,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 			res = rk_hash_update_virt(hash_hdl, tmp_data, tmp_len, true);
 			if (res) {
 				E_TRACE("rk_hash_update_virt[%lu/%u] error = %d\n",
-					tmp_data - buffer, tmp_len, res);
+					(unsigned long)(tmp_data - buffer), tmp_len, res);
 				goto exit;
 			}
 		}

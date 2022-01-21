@@ -12,7 +12,7 @@
 #include "test_utils.h"
 
 #define DATA_BUTT	0xFFFFFFFF
-#define TEST_DATA_MAX	256
+#define TEST_DATA_MAX	(1024 * 1024)
 
 struct test_cipher_item {
 	uint32_t algo;
@@ -166,8 +166,8 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 				/* Verify the result */
 				if (memcmp(cipher_hard, cipher_soft, data_len) != 0) {
 					E_TRACE("rkcrypto_test_cipher_virt compare failed.\n");
-					test_dump_hex("cipher_hard", cipher_hard, data_len);
-					test_dump_hex("cipher_soft", cipher_soft, data_len);
+//					test_dump_hex("cipher_hard", cipher_hard, data_len);
+//					test_dump_hex("cipher_soft", cipher_soft, data_len);
 					res = RK_CRYPTO_ERR_GENERIC;
 					goto exit;
 				}
@@ -283,8 +283,8 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 				/* Verify the result */
 				if (memcmp(cipher_hard->vaddr, cipher_soft->vaddr, data_len) != 0) {
 					E_TRACE("rkcrypto_test_cipher compare failed.\n");
-					test_dump_hex("cipher_hard", cipher_hard->vaddr, data_len);
-					test_dump_hex("cipher_soft", cipher_soft->vaddr, data_len);
+//					test_dump_hex("cipher_hard", cipher_hard->vaddr, data_len);
+//					test_dump_hex("cipher_soft", cipher_soft->vaddr, data_len);
 					res = RK_CRYPTO_ERR_GENERIC;
 					goto exit;
 				}
