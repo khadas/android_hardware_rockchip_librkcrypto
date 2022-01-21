@@ -14,6 +14,9 @@
 #define D_TRACE(fmt,...)		(void)0
 #endif
 
+#define I_TRACE(fmt,...) \
+	printf("RKCRYPTO I[%s, %d]: "fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
+
 #define E_TRACE(fmt,...) \
 	printf("RKCRYPTO E[%s, %d]: "fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
 
