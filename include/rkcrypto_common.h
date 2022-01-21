@@ -10,6 +10,22 @@
 typedef uint32_t RK_RES;
 typedef uint32_t rk_handle;
 
+#define STR_HELPER(x)	#x
+#define STR(x)		STR_HELPER(x)
+
+/* RK_CRYPTO api verison */
+#define RK_CRYPTO_API_MAJOR_VERSION	1
+#define RK_CRYPTO_API_MINOR_VERSION	0
+#define RK_CRYPTO_API_REVISION_VERSION	0
+#define RK_CRYPTO_API_BUILD_VERSION	0
+
+#define RK_CRYPTO_API_VERSION STR(RK_CRYPTO_API_MAJOR_VERSION) "." \
+			      STR(RK_CRYPTO_API_MINOR_VERSION) "." \
+			      STR(RK_CRYPTO_API_REVISION_VERSION) "_[" \
+			      STR(RK_CRYPTO_API_BUILD_VERSION) "]"
+
+#define RK_CRYPTO_API_FULL_VERSION "rkcrypto api version " RK_CRYPTO_API_VERSION
+
 /* API return codes */
 #define RK_CRYPTO_SUCCESS		0x00000000
 #define RK_CRYPTO_ERR_GENERIC		0xF0000000

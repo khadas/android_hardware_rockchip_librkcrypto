@@ -259,6 +259,8 @@ exit:
 
 RK_RES rk_crypto_init(void)
 {
+	I_TRACE("%s\n", RK_CRYPTO_API_FULL_VERSION);
+
 	if (cryptodev_fd < 0) {
 		rk_crypto_mem_init();
 
