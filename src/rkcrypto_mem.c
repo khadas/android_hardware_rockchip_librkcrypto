@@ -37,12 +37,17 @@ static int mem_init_cnt;
 static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 {
 	int ret = -1;
+	size_t min_size;
 	struct mem_pool_node *node = NULL;
 	struct drm_rockchip_gem_create req = {
 		.size = size,
 		.flags = 1,
 	};
 	struct drm_rockchip_gem_map_off map_req;
+
+	/* cma must alloc at least two page */
+	min_size = 2 * getpagesize();
+	req.size  = size < min_size ? min_size : size;
 
 	node = malloc(sizeof(*node));
 	if (!node)
@@ -70,6 +75,9 @@ static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 		goto error;
 	}
 
+	D_TRACE("handle = %u, dma_fd = %d, alloc_size = %u, real_size = %u\n",
+		req.handle, node->mem.dma_fd, size, req.size);
+
 #ifdef __ANDROID__
 	node->mem.vaddr = mmap64(0, req.size, PROT_READ | PROT_WRITE, MAP_SHARED,
 				 drm_fd, map_req.offset);
@@ -78,7 +86,8 @@ static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 				 drm_fd, map_req.offset);
 #endif
 	if (node->mem.vaddr == MAP_FAILED) {
-		E_TRACE("failed to mmap buffer.error = %d\n", errno);
+		E_TRACE("failed to mmap buffer. offset = %llu, reason: %s\n",
+			map_req.offset, strerror(errno));
 		ret = -1;
 		goto error;
 	}
