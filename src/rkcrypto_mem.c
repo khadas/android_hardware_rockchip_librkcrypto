@@ -94,7 +94,7 @@ static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 
 	node->handle   = req.handle;
 	node->flags    = req.flags;
-	node->mem.size = req.size;
+	node->mem.size = size;
 
 	return node;
 error:
@@ -109,6 +109,8 @@ error:
 static void crypto_free_node(struct mem_pool_node *node)
 {
 	struct drm_gem_close req;
+	size_t min_size;
+	min_size = 2 * getpagesize();
 
 	if (!node || node->mem.size == 0)
 		return;
@@ -118,7 +120,7 @@ static void crypto_free_node(struct mem_pool_node *node)
 	req.handle = node->handle;
 
 	if (node->mem.vaddr)
-		munmap(node->mem.vaddr, node->mem.size);
+		munmap(node->mem.vaddr, node->mem.size < min_size ? min_size : node->mem.size);
 
 	if (node->mem.dma_fd >= 0)
 		close(node->mem.dma_fd);
