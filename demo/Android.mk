@@ -9,9 +9,9 @@ SRC_FILES_DIR := $(wildcard $(LOCAL_PATH)/*.c)
 
 LOCAL_SRC_FILES += $(SRC_FILES_DIR:$(LOCAL_PATH)/%=%)
 
-LOCAL_C_INCLUDES += $(LOCAL_PATH)/../out/target/include
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../include
 
-LOCAL_LDFLAGS += $(LOCAL_PATH)/../out/target/lib/$(TARGET_ARCH)/librkcrypto.so
+LOCAL_LDFLAGS += -lrkcrypto
 
 LOCAL_MODULE := librkcrypto_demo
 LOCAL_MODULE_TAGS := optional
