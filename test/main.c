@@ -6,6 +6,7 @@
 #include <strings.h>
 #include "test_otp_key_crypto.h"
 #include "test_cipher.h"
+#include "test_crypto_mem.h"
 #include "test_hash.h"
 
 typedef enum {
@@ -15,6 +16,7 @@ typedef enum {
 	CIPHER,
 	HASH,
 	HMAC,
+	MEM,
 	TEST_NULL,
 } enum_func;
 
@@ -28,6 +30,7 @@ static const struct {
 	{"cipher",		CIPHER},
 	{"hash",		HASH},
 	{"hmac",		HMAC},
+	{"mem",			MEM},
 	{NULL,			TEST_NULL},
 };
 
@@ -88,6 +91,9 @@ int main(int argc, char *argv[])
 		break;
 	case HMAC:
 		test_hmac();
+		break;
+	case MEM:
+		test_crypto_mem();
 		break;
 	default:
 		break;
