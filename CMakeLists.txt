@@ -32,6 +32,12 @@ endif ()
 
 project (rkcrypto C)
 
+add_compile_options(-Wall -Werror)
+add_compile_options(-Wno-unused-function)
+add_compile_options(-Wno-unused-parameter)
+add_compile_options(-Wno-format-truncation)
+add_compile_options(-Wno-maybe-uninitialized)
+
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING
 	"Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
