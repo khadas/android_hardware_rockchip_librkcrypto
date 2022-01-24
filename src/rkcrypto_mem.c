@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2022 Rockchip Electronics Co. Ltd.
  */
-
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,7 +86,7 @@ static struct mem_pool_node *crypto_alloc_node(uint32_t size)
 				 drm_fd, map_req.offset);
 #endif
 	if (node->mem.vaddr == MAP_FAILED) {
-		E_TRACE("failed to mmap buffer. offset = %llu, reason: %s\n",
+		E_TRACE("failed to mmap buffer. offset = %"PRIu64", reason: %s\n",
 			map_req.offset, strerror(errno));
 		ret = -1;
 		goto error;
