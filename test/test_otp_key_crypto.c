@@ -5,7 +5,6 @@
 #include <time.h>
 #include "c_model.h"
 #include "cmode_adapter.h"
-#include "rkcrypto_common.h"
 #include "rkcrypto_core.h"
 #include "rkcrypto_mem.h"
 #include "rkcrypto_otp_key.h"
@@ -38,6 +37,68 @@ uint8_t otp_key3[32] = {
 	0x05, 0x21, 0x07, 0xc9, 0x44, 0x00, 0x1b, 0x80,
 	0x5f, 0x9e, 0x41, 0xac, 0xe4, 0x64, 0x43, 0xa3,
 	0x13, 0x06, 0x07, 0x08, 0x3f, 0xe7, 0x05, 0x06,
+};
+
+#define DATA_BUTT	0xFFFFFFFF
+#define TEST_DATA_MAX	(1024 * 1024)
+
+static const uint32_t test_key_ids[] = {
+	RK_OEM_OTP_KEY0,
+	RK_OEM_OTP_KEY1,
+	RK_OEM_OTP_KEY2,
+	RK_OEM_OTP_KEY3,
+};
+struct test_otp_key_item {
+	uint32_t algo;
+	uint32_t modes[RK_CIPHER_MODE_MAX];
+	uint32_t key_lens[4];
+	uint32_t iv_len;
+	uint32_t data_len;
+	uint32_t operations[4];
+};
+
+static struct test_otp_key_item test_item_tbl[] = {
+	{
+		.algo    = RK_ALGO_AES,
+		.modes   = {
+			RK_CIPHER_MODE_ECB,
+			RK_CIPHER_MODE_CBC,
+			RK_CIPHER_MODE_CTS,
+			RK_CIPHER_MODE_CTR,
+			RK_CIPHER_MODE_CFB,
+			RK_CIPHER_MODE_OFB,
+			DATA_BUTT,
+		},
+		.key_lens   = {16, 24, 32, DATA_BUTT},
+		.iv_len     = AES_BLOCK_SIZE,
+		.data_len   = TEST_DATA_MAX,
+		.operations = {
+			RK_OP_CIPHER_ENC,
+			RK_OP_CIPHER_DEC,
+			DATA_BUTT,
+		},
+	},
+
+	{
+		.algo  = RK_ALGO_SM4,
+		.modes = {
+			RK_CIPHER_MODE_ECB,
+			RK_CIPHER_MODE_CBC,
+			RK_CIPHER_MODE_CTS,
+			RK_CIPHER_MODE_CTR,
+			RK_CIPHER_MODE_CFB,
+			RK_CIPHER_MODE_OFB,
+			DATA_BUTT,
+		},
+		.key_lens   = {16, DATA_BUTT},
+		.iv_len     = SM4_BLOCK_SIZE,
+		.data_len   = TEST_DATA_MAX,
+		.operations = {
+			RK_OP_CIPHER_ENC,
+			RK_OP_CIPHER_DEC,
+			DATA_BUTT,
+		},
+	},
 };
 
 static const char *algo_name_tab[] = {
@@ -101,226 +162,6 @@ void test_write_otp_key(void)
 	printf("write otp key 3. res:%d\n", res);
 
 	return;
-}
-
-static int test_func_item_virt(uint32_t key_id, uint32_t key_len,
-			       uint32_t algo, uint32_t mode,
-			       uint32_t data_len)
-{
-	uint32_t res;
-	rk_cipher_config config;
-	uint8_t *key = NULL;
-	uint8_t iv[16];
-	uint8_t in[RK_CRYPTO_MAX_DATA_LEN];
-	uint8_t out[RK_CRYPTO_MAX_DATA_LEN];
-	uint8_t out_soft[RK_CRYPTO_MAX_DATA_LEN];
-
-	printf("### virt: key_id:%d, algo:%s, mode:%s, key_len:%d, data_len:%d\n",
-	       key_id, algo_name_tab[algo], mode_name_tab[mode], key_len, data_len);
-
-	memset(iv, 0x00, sizeof(iv));
-	memset(in, 0x00, sizeof(in));
-	memset(out, 0x00, sizeof(out));
-	memset(out_soft, 0x00, sizeof(out_soft));
-
-	test_get_rng(iv, sizeof(iv));
-	test_get_rng(in, data_len);
-
-	switch (key_id) {
-	case RK_OEM_OTP_KEY0:
-		key = otp_key0;
-		break;
-	case RK_OEM_OTP_KEY1:
-		key = otp_key1;
-		break;
-	case RK_OEM_OTP_KEY2:
-		key = otp_key2;
-		break;
-	case RK_OEM_OTP_KEY3:
-		key = otp_key3;
-		break;
-	default:
-		return -1;
-	}
-
-	config.algo      = algo;
-	config.mode      = mode;
-	config.operation = RK_OP_CIPHER_ENC;
-	config.key_len   = key_len;
-	config.reserved  = NULL;
-
-	memcpy(config.iv, iv, sizeof(iv));
-
-	res = rk_oem_otp_key_cipher_virt(key_id, &config, in, out, data_len);
-	if (res)
-		printf("test rk_oem_otp_key_cipher_virt fail! 0x%08x\n", res);
-
-	res = soft_cipher(algo, mode, RK_OP_CIPHER_ENC, key, key_len, iv,
-			  in, data_len, out_soft);
-	if (res) {
-		printf("test cipher soft fail! 0x%08x\n", res);
-		return res;
-	}
-
-	if (memcmp(out_soft, out, data_len)) {
-		printf("compare ENC result faild!!!\n");
-		test_dump_hex("key:", key, key_len);
-		test_dump_hex("iv:", iv, sizeof(iv));
-		test_dump_hex("in:", in, data_len > 128 ? 128 : data_len);
-		test_dump_hex("out:", out, data_len > 128 ? 128 : data_len);
-		test_dump_hex("expected:", out_soft, data_len > 128 ? 128 : data_len);
-		return -1;
-	} else
-		printf("ENC result success.\n");
-
-	config.operation = RK_OP_CIPHER_DEC;
-
-	res = rk_oem_otp_key_cipher_virt(key_id, &config, out, out, data_len);
-	if (res)
-		printf("test rk_oem_otp_key_cipher_virt fail! 0x%08x\n", res);
-
-	if (memcmp(out, in, data_len)) {
-		printf("compare DEC result faild!!!\n");
-		test_dump_hex("key:", key, key_len);
-		test_dump_hex("iv:", iv, sizeof(iv));
-		test_dump_hex("in:", out_soft, data_len > 128 ? 128 : data_len);
-		test_dump_hex("out:", out, data_len > 128 ? 128 : data_len);
-		test_dump_hex("expected:", in, data_len > 128 ? 128 : data_len);
-		return -1;
-	} else
-		printf("DEC result success.\n");
-
-	return 0;
-}
-
-static int test_func_item_fd(uint32_t key_id, uint32_t key_len,
-			     uint32_t algo, uint32_t mode,
-			     uint32_t data_len)
-{
-	uint32_t res = 0;
-	rk_cipher_config config;
-	uint8_t *key = NULL;
-	uint8_t *out_soft = NULL;
-	uint8_t iv[16];
-	rk_crypto_mem *in = NULL;
-	rk_crypto_mem *out = NULL;
-
-	printf("### phys: key_id:%d, algo:%s, mode:%s, key_len:%d, data_len:%d\n",
-	       key_id, algo_name_tab[algo], mode_name_tab[mode], key_len, data_len);
-
-	switch (key_id) {
-	case RK_OEM_OTP_KEY0:
-		key = otp_key0;
-		break;
-	case RK_OEM_OTP_KEY1:
-		key = otp_key1;
-		break;
-	case RK_OEM_OTP_KEY2:
-		key = otp_key2;
-		break;
-	case RK_OEM_OTP_KEY3:
-		key = otp_key3;
-		break;
-	default:
-		return -1;
-	}
-
-	res = rk_crypto_init();
-	if (res) {
-		printf("rk_crypto_init error! res: 0x%08x\n", res);
-		return res;
-	}
-
-	in = rk_crypto_mem_alloc(data_len);
-	if (!in) {
-		printf("rk_crypto_mem_alloc %uByte error!\n", data_len);
-		res = -1;
-		goto exit;
-	}
-
-	out = rk_crypto_mem_alloc(data_len);
-	if (!out) {
-		printf("rk_crypto_mem_alloc %uByte error!\n", data_len);
-		res = -1;
-		goto exit;
-	}
-
-	out_soft = malloc(data_len);
-	if (!out_soft) {
-		printf("malloc %uByte error!\n", data_len);
-		res = -1;
-		goto exit;
-	}
-
-	test_get_rng(iv, sizeof(iv));
-	test_get_rng(in->vaddr, data_len);
-
-	config.algo      = algo;
-	config.mode      = mode;
-	config.operation = RK_OP_CIPHER_ENC;
-	config.key_len   = key_len;
-	config.reserved  = NULL;
-
-	memcpy(config.iv, iv, sizeof(iv));
-
-	res = rk_oem_otp_key_cipher(key_id, &config, in->dma_fd, out->dma_fd, data_len);
-	if (res) {
-		printf("test rk_oem_otp_key_cipher fail! 0x%08x\n", res);
-		goto exit;
-	}
-
-	res = soft_cipher(algo, mode, RK_OP_CIPHER_ENC, key, key_len, iv,
-			  in->vaddr, data_len, out_soft);
-	if (res) {
-		printf("test cipher soft fail! 0x%08x\n", res);
-		goto exit;
-	}
-
-	if (memcmp(out->vaddr, out_soft, data_len)) {
-		printf("compare ENC result faild!!!\n");
-		test_dump_hex("key:", key, key_len);
-		test_dump_hex("iv:", iv, sizeof(iv));
-		test_dump_hex("in:", in->vaddr, data_len > 128 ? 128 : data_len);
-		test_dump_hex("out:", out->vaddr, data_len > 128 ? 128 : data_len);
-		test_dump_hex("expected:", out_soft, data_len > 128 ? 128 : data_len);
-		res = -1;
-		goto exit;
-	} else
-		printf("ENC result success.\n");
-
-	config.operation = RK_OP_CIPHER_DEC;
-
-	res = rk_oem_otp_key_cipher(key_id, &config, out->dma_fd, out->dma_fd, data_len);
-	if (res) {
-		printf("test rk_oem_otp_key_cipher fail! 0x%08x\n", res);
-		goto exit;
-	}
-
-	if (memcmp(out->vaddr, in->vaddr, data_len)) {
-		printf("compare DEC result faild!!!\n");
-		test_dump_hex("key:", key, key_len);
-		test_dump_hex("iv:", iv, sizeof(iv));
-		test_dump_hex("in:", out_soft, data_len > 128 ? 128 : data_len);
-		test_dump_hex("out:", out->vaddr, data_len > 128 ? 128 : data_len);
-		test_dump_hex("expected:", in->vaddr, data_len > 128 ? 128 : data_len);
-		res = -1;
-		goto exit;
-	} else
-		printf("DEC result success.\n");
-
-	res = 0;
-exit:
-	if (!in)
-		rk_crypto_mem_free(in);
-
-	if (!out)
-		rk_crypto_mem_free(out);
-
-	if (!out_soft)
-		free(out_soft);
-
-	rk_crypto_deinit();
-	return res;
 }
 
 static int test_speed_item_virt(uint32_t key_id, uint32_t key_len,
@@ -520,70 +361,316 @@ error:
 	return -1;
 }
 
-int test_func_otp_key_cipher(void)
+static int test_otp_key_item_virt(uint32_t key_id, const struct test_otp_key_item *item)
 {
-	uint32_t h, i, j, k, l;
-	uint32_t algo, key_id, mode, len, key_len;
+	int res = 0;
+	uint32_t i, j, k;
+	uint8_t *key = NULL;
+	rk_cipher_config cipher_cfg;
+	uint8_t *plain = NULL, *cipher_soft = NULL, *cipher_hard = NULL;
+	uint32_t algo = 0, mode = 0, key_len, data_len, operation;
 
-	const uint32_t algo_tab[] = {
-		RK_ALGO_AES,
-		RK_ALGO_SM4,
-	};
-	const uint32_t key_tab[] = {
-		RK_OEM_OTP_KEY0,
-		RK_OEM_OTP_KEY1,
-		RK_OEM_OTP_KEY2,
-		RK_OEM_OTP_KEY3,
-	};
-	const uint32_t mode_tab[] = {
-		RK_CIPHER_MODE_ECB,
-		RK_CIPHER_MODE_CBC,
-		RK_CIPHER_MODE_CTS,
-		RK_CIPHER_MODE_CTR,
-		RK_CIPHER_MODE_CFB,
-		RK_CIPHER_MODE_OFB,
-	};
-	const uint32_t len_tab[] = {
-		32,
-		1024,
-		512 * 1024,
-		1024 * 1024
-	};
-	const uint32_t key_len_tab[] = {
-		16,
-		24,
-		32
-	};
+	plain = malloc(item->data_len);
+	if (!plain) {
+		printf("plain malloc %uByte error!\n", item->data_len);
+		res = -1;
+		goto exit;
+	}
 
-	for (h = 0; h < ARRAY_SIZE(algo_tab); h++) {
-		for (i = 0; i < ARRAY_SIZE(key_tab); i++) {
-			for (j = 0; j < ARRAY_SIZE(mode_tab); j++) {
-				for (k = 0; k < ARRAY_SIZE(len_tab); k++) {
-					for (l = 0; l < ARRAY_SIZE(key_len_tab); l++) {
-						algo = algo_tab[h];
-						key_id = key_tab[i];
-						mode = mode_tab[j];
-						len = len_tab[k];
-						key_len = key_len_tab[l];
+	cipher_soft = malloc(item->data_len);
+	if (!cipher_soft) {
+		printf("cipher_soft malloc %uByte error!\n", item->data_len);
+		res = -1;
+		goto exit;
+	}
 
-						if (algo == RK_ALGO_SM4 && key_len != 16)
-							break;
+	cipher_hard = malloc(item->data_len);
+	if (!cipher_hard) {
+		printf("cipher_hard malloc %uByte error!\n", item->data_len);
+		res = -1;
+		goto exit;
+	}
 
-						if (test_func_item_virt(key_id, key_len, algo, mode, len))
-							goto error;
+	switch (key_id) {
+	case RK_OEM_OTP_KEY0:
+		key = otp_key0;
+		break;
+	case RK_OEM_OTP_KEY1:
+		key = otp_key1;
+		break;
+	case RK_OEM_OTP_KEY2:
+		key = otp_key2;
+		break;
+	case RK_OEM_OTP_KEY3:
+		key = otp_key3;
+		break;
+	default:
+		return -1;
+	}
 
-						if (test_func_item_fd(key_id, key_len, algo, mode, len))
-							goto error;
-					}
+	memset(&cipher_cfg, 0x00, sizeof(cipher_cfg));
+	test_get_rng(cipher_cfg.iv, item->iv_len);
+
+	test_get_rng(plain, item->data_len);
+
+	memset(cipher_soft, 0x00, item->data_len);
+	memset(cipher_hard, 0x00, item->data_len);
+
+	for (i = 0; i < ARRAY_SIZE(item->modes); i++) {
+		if (item->modes[i] == DATA_BUTT)
+			break;
+
+		algo = item->algo;
+		mode = item->modes[i];
+
+		for (j = 0; j < ARRAY_SIZE(item->key_lens); j++) {
+			if (item->key_lens[j] == DATA_BUTT)
+				break;
+
+			key_len  = item->key_lens[j];
+			data_len = item->data_len;
+
+			for (k = 0; k < ARRAY_SIZE(item->operations); k++) {
+				if (item->operations[k] == DATA_BUTT)
+					break;
+
+				operation = item->operations[k];
+
+				cipher_cfg.algo      = algo;
+				cipher_cfg.mode      = mode;
+				cipher_cfg.operation = operation;
+				cipher_cfg.key_len   = key_len;
+				cipher_cfg.reserved  = NULL;
+
+				res = rk_oem_otp_key_cipher_virt(key_id, &cipher_cfg,
+								 plain, cipher_hard, data_len);
+				if (res) {
+					printf("rk_oem_otp_key_cipher_virt fail! 0x%08x\n", res);
+					goto exit;
 				}
+
+				res = soft_cipher(algo, mode, operation, key, key_len,
+						  cipher_cfg.iv, plain, data_len, cipher_soft);
+				if (res) {
+					printf("soft_cipher fail! 0x%08x\n", res);
+					goto exit;
+				}
+
+				if (memcmp(cipher_soft, cipher_hard, data_len)) {
+					printf("rk_oem_otp_key_cipher_virt compare failed.\n");
+					res = -1;
+					goto exit;
+				}
+
+				printf("virt:\totpkey%d\t[%s-%u]\t%s\t%s\tPASS\n",
+				       key_id, test_algo_name(algo), key_len * 8,
+				       test_mode_name(mode), test_op_name(operation));
 			}
 		}
 	}
 
-	printf("##### TEST SUCCESS.  #####\n");
-	return 0;
+exit:
+	if (plain)
+		free(plain);
 
-error:
-	printf("##### TEST FILED!!!  #####\n");
-	return -1;
+	if (cipher_soft)
+		free(cipher_soft);
+
+	if (cipher_hard)
+		free(cipher_hard);
+
+	if (res)
+		printf("virt:\totpkey%d\t[%s-%u]\t%s\t%s\tFAIL\n",
+		       key_id, test_algo_name(algo), key_len * 8,
+		       test_mode_name(mode), test_op_name(operation));
+
+	return res;
+}
+
+static int test_otp_key_item_fd(uint32_t key_id, const struct test_otp_key_item *item)
+{
+	int res = 0;
+	uint32_t i, j, k;
+	uint8_t *key = NULL;
+	rk_cipher_config cipher_cfg;
+	uint8_t *cipher_soft = NULL;
+	rk_crypto_mem *plain = NULL;
+	rk_crypto_mem *cipher_hard = NULL;
+	uint32_t algo = 0, mode = 0, key_len, data_len, operation;
+
+	cipher_soft = malloc(item->data_len);
+	if (!cipher_soft) {
+		printf("cipher_soft malloc %uByte error!\n", item->data_len);
+		res = -1;
+		goto exit;
+	}
+
+	plain = rk_crypto_mem_alloc(item->data_len);
+	if (!plain) {
+		printf("rk_crypto_mem_alloc %uByte error!\n", item->data_len);
+		res = -1;
+		goto exit;
+	}
+
+	cipher_hard = rk_crypto_mem_alloc(item->data_len);
+	if (!cipher_hard) {
+		printf("rk_crypto_mem_alloc %uByte error!\n", item->data_len);
+		res = -1;
+		goto exit;
+	}
+
+	switch (key_id) {
+	case RK_OEM_OTP_KEY0:
+		key = otp_key0;
+		break;
+	case RK_OEM_OTP_KEY1:
+		key = otp_key1;
+		break;
+	case RK_OEM_OTP_KEY2:
+		key = otp_key2;
+		break;
+	case RK_OEM_OTP_KEY3:
+		key = otp_key3;
+		break;
+	default:
+		return -1;
+	}
+
+	memset(&cipher_cfg, 0x00, sizeof(cipher_cfg));
+	test_get_rng(cipher_cfg.iv, item->iv_len);
+
+	test_get_rng(plain->vaddr, item->data_len);
+
+	memset(cipher_soft, 0x00, item->data_len);
+	memset(cipher_hard->vaddr, 0x00, item->data_len);
+
+	for (i = 0; i < ARRAY_SIZE(item->modes); i++) {
+		if (item->modes[i] == DATA_BUTT)
+			break;
+
+		algo = item->algo;
+		mode = item->modes[i];
+
+		for (j = 0; j < ARRAY_SIZE(item->key_lens); j++) {
+			if (item->key_lens[j] == DATA_BUTT)
+				break;
+
+			key_len  = item->key_lens[j];
+			data_len = item->data_len;
+
+			for (k = 0; k < ARRAY_SIZE(item->operations); k++) {
+				if (item->operations[k] == DATA_BUTT)
+					break;
+
+				operation = item->operations[k];
+
+				cipher_cfg.algo      = algo;
+				cipher_cfg.mode      = mode;
+				cipher_cfg.operation = operation;
+				cipher_cfg.key_len   = key_len;
+				cipher_cfg.reserved  = NULL;
+
+				res = rk_oem_otp_key_cipher(key_id, &cipher_cfg, plain->dma_fd,
+							    cipher_hard->dma_fd, data_len);
+				if (res) {
+					printf("rk_oem_otp_key_cipher fail! 0x%08x\n", res);
+					goto exit;
+				}
+
+				res = soft_cipher(algo, mode, operation, key, key_len,
+						  cipher_cfg.iv, plain->vaddr, data_len,
+						  cipher_soft);
+				if (res) {
+					printf("soft_cipher fail! 0x%08x\n", res);
+					goto exit;
+				}
+
+				if (memcmp(cipher_soft, cipher_hard->vaddr, data_len)) {
+					printf("rk_oem_otp_key_cipher compare failed.\n");
+					res = -1;
+					goto exit;
+				}
+
+				printf("dma_fd:\totpkey%d\t[%s-%u]\t%s\t%s\tPASS\n",
+				       key_id, test_algo_name(algo), key_len * 8,
+				       test_mode_name(mode), test_op_name(operation));
+			}
+		}
+	}
+
+exit:
+	if (cipher_soft)
+		free(cipher_soft);
+
+	if (plain)
+		rk_crypto_mem_free(plain);
+
+	if (cipher_hard)
+		rk_crypto_mem_free(cipher_hard);
+
+	if (res)
+		printf("dma_fd:\totpkey%d\t[%s-%u]\t%s\t%s\tFAIL\n",
+		       key_id, test_algo_name(algo), key_len * 8,
+		       test_mode_name(mode), test_op_name(operation));
+
+	return res;
+}
+
+static int test_otp_key_fd(void)
+{
+	int res;
+	int i, j;
+	uint32_t key_id;
+
+	res = rk_crypto_init();
+	if (res) {
+		printf("rk_crypto_init error!\n");
+		return res;
+	}
+
+
+	for (i = 0; i < ARRAY_SIZE(test_key_ids); i++) {
+		key_id = test_key_ids[i];
+
+		for (j = 0; j < ARRAY_SIZE(test_item_tbl); j++) {
+			res = test_otp_key_item_fd(key_id, &test_item_tbl[j]);
+			if (res)
+				goto exit;
+		}
+	}
+
+exit:
+	rk_crypto_deinit();
+	return res;
+}
+
+static int test_otp_key_virt(void)
+{
+	int res;
+	int i, j;
+	uint32_t key_id;
+
+	for (i = 0; i < ARRAY_SIZE(test_key_ids); i++) {
+		key_id = test_key_ids[i];
+
+		for (j = 0; j < ARRAY_SIZE(test_item_tbl); j++) {
+			res = test_otp_key_item_virt(key_id, &test_item_tbl[j]);
+			if (res)
+				goto exit;
+		}
+	}
+
+exit:
+	return res;
+}
+
+RK_RES test_otp_key(void)
+{
+	if (test_otp_key_virt())
+		return RK_CRYPTO_ERR_GENERIC;
+
+	if (test_otp_key_fd())
+		return RK_CRYPTO_ERR_GENERIC;
+
+	return RK_CRYPTO_SUCCESS;
 }

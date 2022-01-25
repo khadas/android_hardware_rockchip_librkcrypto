@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 			test_hash();
 			test_hmac();
 			test_write_otp_key();
-			test_func_otp_key_cipher();
+			test_otp_key();
 			test_crypto_mem();
 			break;
 		case CIPHER:
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 			test_write_otp_key();
 			break;
 		case OTPKEY:
-			test_func_otp_key_cipher();
+			test_otp_key();
 			break;
 		case MEM:
 			test_crypto_mem();

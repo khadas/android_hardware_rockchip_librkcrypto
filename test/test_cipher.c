@@ -142,7 +142,7 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 
 				res = rk_cipher_init(&cipher_cfg, &cipher_hdl);
 				if (res) {
-					printf("virt  : [%s-%u] %-8s%-8s N/A\n",
+					printf("virt:\t[%s-%u]\t%s\t%s\tN/A\n",
 					       test_algo_name(algo), key_len * 8,
 					       test_mode_name(mode), test_op_name(operation));
 					continue;
@@ -174,7 +174,7 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 
 				rk_cipher_final(cipher_hdl);
 				cipher_hdl = 0;
-				printf("virt  : [%s-%u] %-8s%-8s PASS\n",
+				printf("virt:\t[%s-%u]\t%s\t%s\tPASS\n",
 				       test_algo_name(algo), key_len * 8,
 				       test_mode_name(mode), test_op_name(operation));
 			}
@@ -193,7 +193,7 @@ exit:
 		free(cipher_hard);
 
 	if (res)
-		printf("virt  : [%s-%u] %-8s%-8s FAIL\n",
+		printf("virt:\t[%s-%u]\t%s\t%s\tFAIL\n",
 		       test_algo_name(algo), key_len * 8,
 		       test_mode_name(mode), test_op_name(operation));
 
@@ -259,7 +259,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 
 				res = rk_cipher_init(&cipher_cfg, &cipher_hdl);
 				if (res) {
-					printf("dma_fd : [%s-%u] %-8s%-8s N/A\n",
+					printf("dma_fd:\t[%s-%u]\t%s\t%s\tN/A\n",
 					       test_algo_name(algo), key_len * 8,
 					       test_mode_name(mode), test_op_name(operation));
 					continue;
@@ -291,7 +291,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 
 				rk_cipher_final(cipher_hdl);
 				cipher_hdl = 0;
-				printf("dma_fd: [%s-%u] %-8s%-8s PASS\n",
+				printf("dma_fd:\t[%s-%u]\t%s\t%s\tPASS\n",
 				       test_algo_name(algo), key_len * 8,
 				       test_mode_name(mode), test_op_name(operation));
 			}
@@ -305,7 +305,7 @@ exit:
 	rk_crypto_mem_free(cipher_hard);
 
 	if (res)
-		printf("dma_fd: [%s-%u] %-8s%-8s FAIL\n",
+		printf("dma_fd:\t[%s-%u]\t%s\t%s\tFAIL\n",
 		       test_algo_name(algo), key_len * 8,
 		       test_mode_name(mode), test_op_name(operation));
 

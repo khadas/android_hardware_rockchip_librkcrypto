@@ -73,7 +73,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 
 	res = rk_hash_init(&hash_cfg, &hash_hdl);
 	if (res) {
-		printf("virt  : [%-10s]\t: N/A\n", test_algo_name(algo));
+		printf("virt:\t[%12s]\tN/A\n", test_algo_name(algo));
 		return RK_CRYPTO_SUCCESS;
 	}
 
@@ -123,12 +123,12 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 
 
 	hash_hdl = 0;
-	printf("virt  : [%-10s]\t: PASS\n", test_algo_name(algo));
+	printf("virt:\t[%12s]\tPASS\n", test_algo_name(algo));
 
 	res = RK_CRYPTO_SUCCESS;
 exit:
 	if (res)
-		printf("virt  : [%-10s]\t: FAIL\n", test_algo_name(algo));
+		printf("virt:\t[%12s]\tFAIL\n", test_algo_name(algo));
 
 	return res;
 }
@@ -165,7 +165,7 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 
 	res = rk_hash_init(&hash_cfg, &hash_hdl);
 	if (res) {
-		printf("dma_fd: [%-10s]\t: N/A\n", test_algo_name(algo));
+		printf("dma_fd:\t[%12s]\tN/A\n", test_algo_name(algo));
 		return RK_CRYPTO_SUCCESS;
 	}
 
@@ -199,12 +199,12 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 
 
 	hash_hdl = 0;
-	printf("dma_fd: [%-10s]\t: PASS\n", test_algo_name(algo));
+	printf("dma_fd:\t[%12s]\tPASS\n", test_algo_name(algo));
 
 	res = RK_CRYPTO_SUCCESS;
 exit:
 	if (res)
-		printf("dma_fd: [%-10s]\t: FAIL\n", test_algo_name(algo));
+		printf("dma_fd:\t[%12s]\tFAIL\n", test_algo_name(algo));
 
 	return res;
 }
@@ -286,4 +286,3 @@ exit:
 		free(buffer);
 	return 0;
 }
-

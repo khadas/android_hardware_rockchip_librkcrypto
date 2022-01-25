@@ -25,14 +25,17 @@ int test_crypto_mem(void)
 		mem[count] = rk_crypto_mem_alloc(BLOCK_SIZE);
 		if (!mem[count]) {
 			usleep(300); // wait for kernel log print to avoid confusion
-			printf("Crypto alloc [%d KB * %d] success, but\n", (BLOCK_SIZE / 1024), count);
-			printf("Crypto alloc [%d KB * %d] error!\n", (BLOCK_SIZE / 1024), (count + 1));
+			printf("Crypto mem alloc: maximum size is [%d KB * %d].\n",
+			       (BLOCK_SIZE / 1024), count);
 			break;
 		}
 	}
 
-	if (count == MAX_COUNT)
-		printf("Crypto alloc [%d KB * %d] success.\n", (BLOCK_SIZE / 1024), count);
+	if (count == MAX_COUNT) {
+		printf("Crypto mem alloc: successfully alloc [%d KB * %d] size.\n",
+		       (BLOCK_SIZE / 1024), count);
+		printf("You and can alloc for more. Change '#define MAX_COUNT' to test larger size.\n");
+	}
 
 	for (count = count - 1; count >= 0; count --) {
 		rk_crypto_mem_free(mem[count]);
