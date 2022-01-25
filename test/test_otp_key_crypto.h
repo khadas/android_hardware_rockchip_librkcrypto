@@ -9,6 +9,5 @@
 
 void test_write_otp_key(void);
 RK_RES test_otp_key(void);
-int test_speed_otp_key_cipher(uint32_t count);
 
 #endif /*_TEST_KEYLAD_CRYPTO_H_*/

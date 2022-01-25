@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <strings.h>
 #include "test_otp_key_crypto.h"
+#include "test_throughput.h"
 #include "test_cipher.h"
 #include "test_crypto_mem.h"
 #include "test_hash.h"
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
 			test_crypto_mem();
 			break;
 		case THROUGHPUT:
-			test_speed_otp_key_cipher(100);
+			test_throughput();
 			break;
 		case '?':
 			guide();
