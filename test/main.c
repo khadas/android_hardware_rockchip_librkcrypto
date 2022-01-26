@@ -10,6 +10,7 @@
 #include "test_cipher.h"
 #include "test_crypto_mem.h"
 #include "test_hash.h"
+#include "test_random.h"
 
 enum {
 	OPTION_TOP = 0,
@@ -20,6 +21,7 @@ enum {
 	SETKEY,
 	OTPKEY,
 	MEM,
+	RANDOM,
 	THROUGHPUT,
 	OPTION_BUTT,
 };
@@ -37,6 +39,7 @@ static void guide(void)
 	printf("\t-setkey        Function of setkey. NOTE: it will write key to OTP area.\n");
 	printf("\t-otpkey        Function of otpkey\n");
 	printf("\t-mem           Maximum buffer size requested by crypto mem alloc, test until alloc failed\n");
+	printf("\t-random        Function of get random\n");
 	printf("\t-throughput    Throughput of all ciphers, MB/s\n");
 }
 
@@ -52,6 +55,7 @@ int main(int argc, char *argv[])
 		{"setkey",	0,	NULL,	SETKEY},
 		{"otpkey",	0,	NULL,	OTPKEY},
 		{"mem",		0,	NULL,	MEM},
+		{"random",	0,	NULL,	RANDOM},
 		{"throughput",	0,	NULL,	THROUGHPUT},
 		{NULL,		0,	NULL,	0},
 	};
@@ -86,6 +90,9 @@ int main(int argc, char *argv[])
 			break;
 		case MEM:
 			test_crypto_mem();
+			break;
+		case RANDOM:
+			test_random();
 			break;
 		case THROUGHPUT:
 			test_throughput();
