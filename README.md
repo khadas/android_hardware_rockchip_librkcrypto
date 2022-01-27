@@ -13,7 +13,7 @@ librkcrypto依赖于kernel crypto驱动实现，驱动开发和应用API开发�
 ```bash
 # 以linux平台64位为例
 $ strings /lib64/librkcrypto.so |grep api |grep version
-rkcrypto api version 1.0.0_[0]
+rkcrypto api version 1.0.0
 ```
 
 - **日志打印**
@@ -21,7 +21,7 @@ rkcrypto api version 1.0.0_[0]
 当每个进程首次调用librkcrypto时，会打印版本号
 
 ```bash
-RKCRYPTO I[rk_crypto_init, 262]: rkcrypto api version 1.0.0_[0]
+RKCRYPTO I[rk_crypto_init, 262]: rkcrypto api version 1.0.0
 ```
 
 ## 适用芯片平台
