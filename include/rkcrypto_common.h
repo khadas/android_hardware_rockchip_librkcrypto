@@ -34,10 +34,8 @@ typedef uint32_t rk_handle;
 #define RK_CRYPTO_ERR_ACCESS_DENIED	0xF0000005
 
 /* Algorithm operation */
-#define RK_MODE_ENCRYPT			1
-#define RK_MODE_DECRYPT			0
-#define RK_OP_CIPHER_ENC		RK_MODE_ENCRYPT
-#define RK_OP_CIPHER_DEC		RK_MODE_DECRYPT
+#define RK_OP_CIPHER_ENC		1
+#define RK_OP_CIPHER_DEC		0
 
 /* Algorithm block length */
 #define DES_BLOCK_SIZE			8

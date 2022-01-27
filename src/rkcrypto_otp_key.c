@@ -209,8 +209,8 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	RK_CRYPTO_CHECK_PARAM(config->algo != RK_ALGO_AES &&
 			   config->algo != RK_ALGO_SM4);
 	RK_CRYPTO_CHECK_PARAM(config->mode >= RK_CIPHER_MODE_XTS);
-	RK_CRYPTO_CHECK_PARAM(config->operation != RK_MODE_ENCRYPT &&
-			   config->operation != RK_MODE_DECRYPT);
+	RK_CRYPTO_CHECK_PARAM(config->operation != RK_OP_CIPHER_ENC &&
+			   config->operation != RK_OP_CIPHER_DEC);
 	RK_CRYPTO_CHECK_PARAM(config->key_len != 16 &&
 			   config->key_len != 24 &&
 			   config->key_len != 32);
@@ -303,8 +303,8 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	RK_CRYPTO_CHECK_PARAM(config->algo != RK_ALGO_AES &&
 			   config->algo != RK_ALGO_SM4);
 	RK_CRYPTO_CHECK_PARAM(config->mode >= RK_CIPHER_MODE_XTS);
-	RK_CRYPTO_CHECK_PARAM(config->operation != RK_MODE_ENCRYPT &&
-			   config->operation != RK_MODE_DECRYPT);
+	RK_CRYPTO_CHECK_PARAM(config->operation != RK_OP_CIPHER_ENC &&
+			   config->operation != RK_OP_CIPHER_DEC);
 	RK_CRYPTO_CHECK_PARAM(config->key_len != 16 &&
 			   config->key_len != 24 &&
 			   config->key_len != 32);
