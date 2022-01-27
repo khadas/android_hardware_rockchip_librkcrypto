@@ -1,5 +1,9 @@
 cmake_minimum_required (VERSION 2.8)
+project (rkcrypto C)
 
+################################################################################
+# toolchain config
+################################################################################
 set (CMAKE_SYSTEM_NAME Linux)
 
 if (BUILD STREQUAL 64)
@@ -30,8 +34,9 @@ else ()
 	set (ARM_PLATFORM "arm")
 endif ()
 
-project (rkcrypto C)
-
+################################################################################
+# compile flags
+################################################################################
 add_compile_options(-Wall -Werror)
 add_compile_options(-Wno-unused-function)
 add_compile_options(-Wno-unused-parameter)
@@ -44,17 +49,23 @@ if(NOT CMAKE_BUILD_TYPE)
 	FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
+################################################################################
+# librkcrypto files
+################################################################################
 include_directories(include)
-include_directories(third_party/libdrm/include)
-include_directories(third_party/libdrm/include/drm)
-
 file(GLOB SOURCES "src/*.c")
 
-# add libdrm file
+################################################################################
+# libdrm dependencies
+################################################################################
+include_directories(third_party/libdrm/include)
+include_directories(third_party/libdrm/include/drm)
 file(GLOB SOURCES_DRM "third_party/libdrm/src/*.c")
 add_definitions(-DMAJOR_IN_SYSMACROS=1 -D_GNU_SOURCE)
 
-# add libteec api
+################################################################################
+# libteec dependencies
+################################################################################
 add_definitions(-DBINARY_PREFIX=\"TEEC\")
 set(TEEC_PATH third_party/optee_client/libteec)
 include_directories(${TEEC_PATH}/../public ${TEEC_PATH}/include)
@@ -62,11 +73,18 @@ file(GLOB SOURCES_TEEC
 	${TEEC_PATH}/src/tee_client_api.c
 	${TEEC_PATH}/src/teec_trace.c)
 
-# build shared library
+################################################################################
+# build librkcrypto shared library
+################################################################################
 add_library(rkcrypto SHARED ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
 
-# build static library
+################################################################################
+# build librkcrypto static library
+################################################################################
 add_library(rkcrypto_static STATIC ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
 SET_TARGET_PROPERTIES (rkcrypto_static PROPERTIES OUTPUT_NAME "rkcrypto")
 
+################################################################################
+# build other components
+################################################################################
 add_subdirectory(test)

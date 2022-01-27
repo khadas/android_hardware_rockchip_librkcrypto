@@ -1,15 +1,30 @@
 LOCAL_PATH:= $(call my-dir)
-
 include $(CLEAR_VARS)
-LOCAL_CFLAGS += -DANDROID_BUILD -DUSER_SPACE -DMAJOR_IN_SYSMACROS=1 -D_GNU_SOURCE
-LOCAL_CFLAGS += -Wall  -Wno-error -Wno-enum-conversion -Wno-unused-parameter
 
-# micro define for libteec
+###############################################################################
+# common compile flags
+###############################################################################
+LOCAL_CFLAGS += -DANDROID_BUILD -DUSER_SPACE
+LOCAL_CFLAGS += -Wall \
+		-Wno-error \
+		-Wno-enum-conversion \
+		-Wno-unused-parameter
+
+###############################################################################
+# libdrm dependencies
+###############################################################################
+LOCAL_CFLAGS += -DMAJOR_IN_SYSMACROS=1 -D_GNU_SOURCE
+
+###############################################################################
+# libteec dependencies
+###############################################################################
 LOCAL_CFLAGS += -DBINARY_PREFIX=\"TEEC\"
-
-LOCAL_LDFLAGS += -llog
-
 TEEC_PATH := $(LOCAL_PATH)/third_party/optee_client/libteec
+
+###############################################################################
+# build librkcrypto
+###############################################################################
+LOCAL_LDFLAGS += -llog
 
 SRC_FILES_DIR := $(wildcard $(LOCAL_PATH)/src/*.c)
 SRC_FILES_DIR += $(wildcard $(LOCAL_PATH)/third_party/libdrm/src/*.c)
@@ -29,5 +44,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_VENDOR_MODULE := true
 include $(BUILD_SHARED_LIBRARY)
 
-# Build the Android.mk in all sub-dir
+###############################################################################
+# build other components
+###############################################################################
 include $(call all-makefiles-under, $(LOCAL_PATH))
