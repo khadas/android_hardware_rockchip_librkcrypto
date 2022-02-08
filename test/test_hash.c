@@ -65,7 +65,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 	hash_cfg.algo = algo;
 
 	if (is_hmac) {
-		test_get_rng(key, sizeof(key_len));
+		test_get_rng(key, key_len);
 		hash_cfg.key     = key;
 		hash_cfg.key_len = key_len;
 		test_name = "hmac";
@@ -157,7 +157,7 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 	hash_cfg.algo = algo;
 
 	if (is_hmac) {
-		test_get_rng(key, sizeof(key_len));
+		test_get_rng(key, key_len);
 		hash_cfg.key     = key;
 		hash_cfg.key_len = key_len;
 		test_name = "hmac";
