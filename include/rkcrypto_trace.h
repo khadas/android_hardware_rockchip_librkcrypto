@@ -7,18 +7,41 @@
 #include <stdio.h>
 #include "rkcrypto_common.h"
 
+#define RKCRYPTO_LOG_TAG	"rkcrypto"
+
+#ifdef ANDROID
+#include <android/log.h>
+
 #if DEBUG
 #define D_TRACE(fmt,...) \
-	printf("RKCRYPTO D[%s, %d]: "fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
+	__android_log_print(ANDROID_LOG_DEBUG, RKCRYPTO_LOG_TAG,\
+			"[%s, %d]: "fmt, __func__, __LINE__, ##__VA_ARGS__)
 #else
 #define D_TRACE(fmt,...)		(void)0
 #endif
 
 #define I_TRACE(fmt,...) \
-	printf("RKCRYPTO I[%s, %d]: "fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
+	__android_log_print(ANDROID_LOG_INFO, RKCRYPTO_LOG_TAG,\
+			"[%s, %d]: "fmt, __func__, __LINE__, ##__VA_ARGS__)
 
 #define E_TRACE(fmt,...) \
-	printf("RKCRYPTO E[%s, %d]: "fmt"\n", __func__, __LINE__, ##__VA_ARGS__)
+	__android_log_print(ANDROID_LOG_ERROR, RKCRYPTO_LOG_TAG,\
+			"[%s, %d]: "fmt, __func__, __LINE__, ##__VA_ARGS__)
+
+#else /* LINUX */
+#if DEBUG
+#define D_TRACE(fmt,...) \
+	printf("D %s: [%s, %d]: "fmt"\n", RKCRYPTO_LOG_TAG, __func__, __LINE__, ##__VA_ARGS__)
+#else
+#define D_TRACE(fmt,...)		(void)0
+#endif
+
+#define I_TRACE(fmt,...) \
+	printf("I %s: [%s, %d]: "fmt"\n", RKCRYPTO_LOG_TAG, __func__, __LINE__, ##__VA_ARGS__)
+
+#define E_TRACE(fmt,...) \
+	printf("E %s: [%s, %d]: "fmt"\n", RKCRYPTO_LOG_TAG, __func__, __LINE__, ##__VA_ARGS__)
+#endif /* ANDROID */
 
 #define RK_CRYPTO_CHECK_PARAM(_val)\
 	do {\
