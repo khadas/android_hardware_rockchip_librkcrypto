@@ -54,19 +54,22 @@ int rk_sm4_ctr_encrypt(const unsigned char *in, unsigned char *out,
         unsigned int length, const unsigned char *key, const int key_len,
         unsigned char *ivec, const int enc)
 {
-		sm4_context  ctx;
-		struct ctr_state state;
+	sm4_context  ctx;
+	struct ctr_state state;
 
-		if(key_len != 16)
-			return -1;
+	if(key_len != 16)
+		return -1;
 
-//		if(length%SM4_BLOCK_SIZE || length == 0)
-//			return -1;
+	if(length == 0)
+		return -1;
 
-		rk_init_ctr(&state, ivec);
-		rk_sm4_setkey_enc(&ctx, key);
-		rk_crypto_ctr128_encrypt((void*)(&ctx),in, out, length, state.ivec, state.ecount, &state.num, rk_rk_sm4_crypt_ecb);
-		return 0;
+	rk_init_ctr(&state, ivec);
+	rk_sm4_setkey_enc(&ctx, key);
+	rk_crypto_ctr128_encrypt((void*)(&ctx),in, out, length,
+				state.ivec, state.ecount,
+				&state.num, rk_rk_sm4_crypt_ecb);
+
+	return 0;
 }
 
 

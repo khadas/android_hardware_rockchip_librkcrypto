@@ -11,7 +11,7 @@ static void rk_crypto_ofb128_encrypt(const unsigned char *in, unsigned char *out
 
 	n = *num;
 
-	while (l<len) {
+	while (l < len) {
 		if (n==0) {
 			rk_aes_encrypt(ivec, ivec, key);
 		}
@@ -32,18 +32,18 @@ int rk_aes_ofb_encrypt(const unsigned char *in, unsigned char *out,
         unsigned long length, const unsigned char *key, const int key_len, 
         unsigned char *ivec, const int enc)
 {
-		RK_AES_KEY ks;
-		unsigned int num = 0;
+	RK_AES_KEY ks;
+	unsigned int num = 0;
 
-		if(key_len != 16 && key_len != 24 && key_len != 32)
-			return -1;
+	if(key_len != 16 && key_len != 24 && key_len != 32)
+		return -1;
 
-		if(length%AES_BLOCK_SIZE || length == 0)
-			return -1;
+	if(length == 0)
+		return -1;
 
-        rk_aes_set_encrypt_key(key, key_len * 8, &ks);
-		rk_crypto_ofb128_encrypt(in, out, length, &ks, ivec, &num);
-		return 0;
+	rk_aes_set_encrypt_key(key, key_len * 8, &ks);
+	rk_crypto_ofb128_encrypt(in, out, length, &ks, ivec, &num);
+	return 0;
 }
 
 

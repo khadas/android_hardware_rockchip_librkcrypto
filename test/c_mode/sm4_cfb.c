@@ -49,13 +49,13 @@ int rk_sm4_cfb_encrypt(const unsigned char *in, unsigned char *out,
 	if (key_len != 16)
 		return -2;
 
-	if(length % SM4_BLOCK_SIZE!= 0 || length == 0)
+	if(length == 0)
 		return -3;
 
 	rk_sm4_setkey_enc(&ctx, key);
 
 	rk_crypto_cfb128_encrypt((void *)&ctx, in, out,length, ivec,
-									&num,enc, rk_rk_sm4_crypt_ecb);
+				&num,enc, rk_rk_sm4_crypt_ecb);
 	return 0;
 }
 

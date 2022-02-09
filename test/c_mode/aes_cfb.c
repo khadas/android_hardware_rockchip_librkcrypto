@@ -18,7 +18,7 @@ static void rk_crypto_cfb128_encrypt(const unsigned char *in, unsigned char *out
     n = *num;
     if (enc) {
 
-	while (l<len) {
+	while (l < len) {
 		if (n == 0) {
 			(*block)(ivec, ivec, key);
 		}
@@ -28,7 +28,7 @@ static void rk_crypto_cfb128_encrypt(const unsigned char *in, unsigned char *out
 	}
 	*num = n;
     } else {
-	while (l<len) {
+	while (l < len) {
 		unsigned char c;
 		if (n == 0) {
 			(*block)(ivec, ivec, key);
@@ -58,11 +58,8 @@ int rk_aes_cfb_encrypt(const unsigned char *in, unsigned char *out,
 	if (in == NULL || out ==NULL || key == NULL)
 		return -1;
 
-	if (key_len != 128/8 && key_len != 192/8 && key_len != 256/8)
+	if (key_len != 128 / 8 && key_len != 192 / 8 && key_len != 256 / 8)
 		return -2;
-
-	if(length % 16 != 0)
-		return -3;
 
 	rk_aes_set_encrypt_key(key, key_len * 8, &ks1);
 	rk_aes_cfb128_encrypt(in, out, length, &ks1, ivec, &num, enc);

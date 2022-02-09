@@ -54,16 +54,17 @@ int rk_aes_ctr_encrypt(const unsigned char *in, unsigned char *out,
         unsigned long length, const unsigned char *key, const int key_len, 
         const unsigned char *ivec, const int enc)
 {
-		RK_AES_KEY ks;
-		struct ctr_state state;
+	RK_AES_KEY ks;
+	struct ctr_state state;
 
-		if(key_len != 16 && key_len != 24 && key_len != 32)
-			return -1;
+	if(key_len != 16 && key_len != 24 && key_len != 32)
+		return -1;
 
-		rk_init_ctr(&state, ivec);	
-        rk_aes_set_encrypt_key(key, key_len * 8, &ks);
-		rk_crypto_ctr128_encrypt(in, out, length, &ks, state.ivec, state.ecount, &state.num);
-		return 0;
+	rk_init_ctr(&state, ivec);
+	rk_aes_set_encrypt_key(key, key_len * 8, &ks);
+	rk_crypto_ctr128_encrypt(in, out, length, &ks, state.ivec, state.ecount, &state.num);
+
+	return 0;
 }
 
 
