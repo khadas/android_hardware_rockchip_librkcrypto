@@ -174,7 +174,7 @@ static RK_RES rk_add_sess_node(uint32_t sess_id, uint32_t config_type, const voi
 
 	node = malloc(sizeof(*node));
 	if (!node) {
-		D_TRACE("malloc node error!\n");
+		E_TRACE("malloc node error!\n");
 		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
 	}
 
@@ -269,13 +269,13 @@ RK_RES rk_crypto_init(void)
 		/* Open the crypto device */
 		cryptodev_fd = open("/dev/crypto", O_RDWR, 0);
 		if (cryptodev_fd < 0) {
-			D_TRACE("open cryptodev error!\n");
+			E_TRACE("open cryptodev error!\n");
 			return RK_CRYPTO_ERR_GENERIC;
 		}
 
 		/* Set close-on-exec (not really neede here) */
 		if (fcntl(cryptodev_fd, F_SETFD, 1) == -1) {
-			D_TRACE("cryptodev F_SETFD error!\n");
+			E_TRACE("cryptodev F_SETFD error!\n");
 			goto error;
 		}
 	}
@@ -330,7 +330,7 @@ RK_RES rk_cipher_init(const rk_cipher_config *config, rk_handle *handle)
 
 	res = rk_get_crypto_id(config->algo, config->mode, &crypto_id);
 	if (res) {
-		D_TRACE("rk_get_crypto_id error!\n");
+		E_TRACE("rk_get_crypto_id error!\n");
 		goto exit;
 	}
 
@@ -339,7 +339,7 @@ RK_RES rk_cipher_init(const rk_cipher_config *config, rk_handle *handle)
 	sess.keylen = config->key_len;
 
 	if (ioctl(cryptodev_fd, CIOCGSESSION, &sess)) {
-		D_TRACE("CIOCGSESSION error!\n");
+		E_TRACE("CIOCGSESSION error!\n");
 		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
@@ -362,7 +362,7 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 
 	cipher_cfg = rk_get_sess_config(handle);
 	if (!cipher_cfg) {
-		D_TRACE("rk_get_sess_config error!\n");
+		E_TRACE("rk_get_sess_config error!\n");
 		return RK_CRYPTO_ERR_STATE;
 	}
 
@@ -377,7 +377,7 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 	cryp.op     = (cipher_cfg->operation == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT;
 
 	if (ioctl(cryptodev_fd, RIOCCRYPT_FD, &cryp)) {
-		D_TRACE("RIOCCRYPT_FD error!\n");
+		E_TRACE("RIOCCRYPT_FD error!\n");
 		return RK_CRYPTO_ERR_GENERIC;
 	}
 
@@ -397,7 +397,7 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 
 	cipher_cfg = rk_get_sess_config(handle);
 	if (!cipher_cfg) {
-		D_TRACE("rk_get_sess_config error!\n");
+		E_TRACE("rk_get_sess_config error!\n");
 		return RK_CRYPTO_ERR_STATE;
 	}
 
@@ -412,7 +412,7 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 	cryp.op  = (cipher_cfg->operation == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT;
 
 	if (ioctl(cryptodev_fd, CIOCCRYPT, &cryp)) {
-		D_TRACE("CIOCCRYPT error!\n");
+		E_TRACE("CIOCCRYPT error!\n");
 		return RK_CRYPTO_ERR_GENERIC;
 	}
 
@@ -427,7 +427,7 @@ RK_RES rk_cipher_final(rk_handle handle)
 		return RK_CRYPTO_ERR_PARAMETER;
 
 	if (ioctl(cryptodev_fd, CIOCFSESSION, &handle)) {
-		D_TRACE("CIOCFSESSION error!");
+		E_TRACE("CIOCFSESSION error!");
 		return RK_CRYPTO_ERR_GENERIC;
 	}
 
@@ -449,7 +449,7 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 
 	result = malloc(sizeof(*result));
 	if (!result) {
-		D_TRACE("malloc result buffer error!\n");
+		E_TRACE("malloc result buffer error!\n");
 		res = RK_CRYPTO_ERR_OUT_OF_MEMORY;
 		goto exit;
 	}
@@ -459,7 +459,7 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 
 	res = rk_get_crypto_id(config->algo, 0, &crypto_id);
 	if (res) {
-		D_TRACE("rk_get_crypto_id error!\n");
+		E_TRACE("rk_get_crypto_id error!\n");
 		goto exit;
 	}
 
@@ -470,7 +470,7 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 	}
 
 	if (ioctl(cryptodev_fd, CIOCGSESSION, &sess)) {
-		D_TRACE("CIOCGSESSION error!\n");
+		E_TRACE("CIOCGSESSION error!\n");
 		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
@@ -494,7 +494,7 @@ RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len, bool is_
 
 	node = rk_get_sess_node(handle);
 	if (!node) {
-		D_TRACE("handle[%u] rk_get_sess_node  error!\n", handle);
+		E_TRACE("handle[%u] rk_get_sess_node  error!\n", handle);
 		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
 	}
 
@@ -510,7 +510,7 @@ RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len, bool is_
 	cryp.flags  = is_last ? COP_FLAG_FINAL : COP_FLAG_UPDATE;
 
 	if (ioctl(cryptodev_fd, RIOCCRYPT_FD, &cryp)) {
-		D_TRACE("RIOCCRYPT_FD error!\n");
+		E_TRACE("RIOCCRYPT_FD error!\n");
 		return RK_CRYPTO_ERR_GENERIC;
 	}
 
@@ -532,7 +532,7 @@ RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_
 
 	node = rk_get_sess_node(handle);
 	if (!node) {
-		D_TRACE("handle[%u] rk_get_sess_node  error!\n", handle);
+		E_TRACE("handle[%u] rk_get_sess_node  error!\n", handle);
 		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
 	}
 
@@ -548,7 +548,7 @@ RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_
 	cryp.flags = is_last ? COP_FLAG_FINAL : COP_FLAG_UPDATE;
 
 	if (ioctl(cryptodev_fd, CIOCCRYPT, &cryp)) {
-		D_TRACE("CIOCCRYPT error!\n");
+		E_TRACE("CIOCCRYPT error!\n");
 		return RK_CRYPTO_ERR_GENERIC;
 	}
 
@@ -569,18 +569,14 @@ RK_RES rk_hash_final(rk_handle handle, uint8_t *hash, uint32_t *hash_len)
 
 	node = rk_get_sess_node(handle);
 	if (!node) {
-		D_TRACE("handle[%u] rk_get_sess_node  error!\n", handle);
+		E_TRACE("handle[%u] rk_get_sess_node  error!\n", handle);
 		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
 	}
 
 	result = node->priv;
 
-	D_TRACE("xxx debug");
-
 	if (hash) {
-		D_TRACE("xxx debug");
 		if (result->len == 0) {
-			D_TRACE("xxx debug");
 			res = RK_CRYPTO_ERR_GENERIC;
 			goto exit;
 		}
@@ -589,11 +585,10 @@ RK_RES rk_hash_final(rk_handle handle, uint8_t *hash, uint32_t *hash_len)
 
 		if (hash_len)
 			*hash_len = result->len;
-		D_TRACE("xxx debug");
 	}
 exit:
 	if (ioctl(cryptodev_fd, CIOCFSESSION, &handle)) {
-		D_TRACE("CIOCFSESSION error!");
+		E_TRACE("CIOCFSESSION error!");
 		res = RK_CRYPTO_ERR_GENERIC;
 	}
 
