@@ -5,10 +5,13 @@
 #define _TEST_UTILS_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
+
+bool is_no_multi_blocksize(uint32_t mode);
 
 void test_get_rng(uint8_t *trn, uint32_t len);
 void test_dump_hex(char *var_name, const uint8_t *data, uint32_t len);

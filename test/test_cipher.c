@@ -148,6 +148,11 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 					continue;
 				}
 
+				if (is_no_multi_blocksize(mode))
+					data_len = TEST_DATA_MAX - 3;
+				else
+					data_len = TEST_DATA_MAX;
+
 				res = rk_cipher_crypt_virt(cipher_hdl, plain, data_len,
 							   cipher_hard, &out_len);
 				if (res) {
@@ -264,6 +269,11 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 					       test_mode_name(mode), test_op_name(operation));
 					continue;
 				}
+
+				if (is_no_multi_blocksize(mode))
+					data_len = TEST_DATA_MAX - 7;
+				else
+					data_len = TEST_DATA_MAX;
 
 				res = rk_cipher_crypt(cipher_hdl, plain->dma_fd, data_len,
 						      cipher_hard->dma_fd, &out_len);

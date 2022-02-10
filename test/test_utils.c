@@ -5,6 +5,16 @@
 #include "rkcrypto_common.h"
 #include "test_utils.h"
 
+bool is_no_multi_blocksize(uint32_t mode)
+{
+	if (mode == RK_CIPHER_MODE_CTR ||
+	    mode == RK_CIPHER_MODE_CFB ||
+	    mode == RK_CIPHER_MODE_OFB)
+		return true;
+	else
+		return false;
+}
+
 void test_get_rng(uint8_t *trn, uint32_t len)
 {
 	static int init_flag;
