@@ -57,6 +57,7 @@ static struct test_cipher_item test_item_tbl[] = {
 		RK_CIPHER_MODE_CTR,
 		RK_CIPHER_MODE_CFB,
 		RK_CIPHER_MODE_OFB,
+		RK_CIPHER_MODE_XTS,
 		DATA_BUTT,
 	},
 	.key_lens = {16, 24, 32},
@@ -72,6 +73,7 @@ static struct test_cipher_item test_item_tbl[] = {
 		RK_CIPHER_MODE_CTR,
 		RK_CIPHER_MODE_CFB,
 		RK_CIPHER_MODE_OFB,
+		RK_CIPHER_MODE_XTS,
 		DATA_BUTT,
 	},
 	.key_lens = {16},
@@ -127,6 +129,9 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 
 			if (key_len == 0)
 				break;
+
+			if (mode == RK_CIPHER_MODE_XTS)
+				key_len *= 2;
 
 			for (k = 0; k < ARRAY_SIZE(ops); k++) {
 				operation = ops[k];
@@ -249,6 +254,9 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 
 			if (key_len == 0)
 				break;
+
+			if (mode == RK_CIPHER_MODE_XTS)
+				key_len *= 2;
 
 			for (k = 0; k < ARRAY_SIZE(ops); k++) {
 				operation = ops[k];

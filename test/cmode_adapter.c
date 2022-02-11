@@ -49,6 +49,9 @@ RK_RES soft_cipher(uint32_t algo, uint32_t mode, uint32_t operation,
 		case RK_CIPHER_MODE_CTR:
 			ret = rk_aes_ctr_encrypt(in, out, in_len, key, key_len, iv, is_enc);
 			break;
+		case RK_CIPHER_MODE_XTS:
+			ret = rk_aes_xts_encrypt(in, out, in_len, key, key_len, iv, is_enc);
+			break;
 		default:
 			return RK_CRYPTO_ERR_PARAMETER;
 		}
@@ -71,6 +74,9 @@ RK_RES soft_cipher(uint32_t algo, uint32_t mode, uint32_t operation,
 			break;
 		case RK_CIPHER_MODE_CTR:
 			ret = rk_sm4_ctr_encrypt(in, out, in_len, key, key_len, iv, is_enc);
+			break;
+		case RK_CIPHER_MODE_XTS:
+			ret = rk_sm4_xts_encrypt(in, out, in_len, key, key_len, iv, is_enc);
 			break;
 		default:
 			return RK_CRYPTO_ERR_PARAMETER;

@@ -131,28 +131,28 @@ static int aes_xts128_encrypt(const RK_AES_KEY *key1, const RK_AES_KEY *key2,
  * the supplied block cipher's key in half.
  * Because of the splitting, users wanting AES 256 and AES 128 encryption
  * will need to choose key sizes of 512 bits and 256 bits respectively.
- */    
+ */
 int rk_aes_xts_encrypt(const unsigned char *in, unsigned char *out,
         unsigned long length, const unsigned char *key, const int key_len, 
         unsigned char *ivec, const int enc)
 {
 	int ret;
-    RK_AES_KEY ks1, ks2;
+	RK_AES_KEY ks1, ks2;
 
-	if(key_len != 32 && key_len != 64)
+	if(key_len != 32 && key_len != 48 && key_len != 64)
 		return -1;
 
-    if (enc) {
-        ret = rk_aes_set_encrypt_key(key, key_len * 4, &ks1);
-    } else {
-        ret = rk_aes_set_decrypt_key(key, key_len * 4, &ks1);
-    }
+	if (enc) {
+		ret = rk_aes_set_encrypt_key(key, key_len * 4, &ks1);
+	} else {
+		ret = rk_aes_set_decrypt_key(key, key_len * 4, &ks1);
+	}
 
-    ret = rk_aes_set_encrypt_key(key + key_len / 2, key_len * 4, &ks2);
+	ret = rk_aes_set_encrypt_key(key + key_len / 2, key_len * 4, &ks2);
 	if (ret != 0)
 		return ret;
 
-    return aes_xts128_encrypt(&ks1, &ks2, ivec, in, out, length, enc);
+	return aes_xts128_encrypt(&ks1, &ks2, ivec, in, out, length, enc);
 }
 
 
