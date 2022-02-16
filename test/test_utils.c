@@ -74,6 +74,10 @@ static const struct test_name_map algo_map_tbl[] = {
 	{RK_ALGO_HMAC_SHA256, "HMAC_SHA256"},
 	{RK_ALGO_HMAC_SHA512, "HMAC_SHA512"},
 	{RK_ALGO_HMAC_SM3,    "HMAC_SM3"},
+	{RK_ALGO_CMAC_SM4,    "CMAC_SM4"},
+	{RK_ALGO_CBCMAC_SM4,  "CBCMAC_SM4"},
+	{RK_ALGO_CMAC_AES,    "CMAC_AES"},
+	{RK_ALGO_CBCMAC_AES,  "CBCMAC_AES"},
 };
 
 static const struct test_name_map mode_map_tbl[] = {
@@ -86,8 +90,6 @@ static const struct test_name_map mode_map_tbl[] = {
 	{RK_CIPHER_MODE_XTS,     "XTS"},
 	{RK_CIPHER_MODE_CCM,     "CCM"},
 	{RK_CIPHER_MODE_GCM,     "GCM"},
-	{RK_CIPHER_MODE_CMAC,    "CMAC"},
-	{RK_CIPHER_MODE_CBC_MAC, "CBC_MAC"},
 };
 
 static const struct test_name_map ops_map_tbl[] = {
