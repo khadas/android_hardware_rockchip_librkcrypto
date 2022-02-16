@@ -39,7 +39,7 @@ uint8_t otp_key3[32] = {
 };
 
 #define DATA_BUTT	0xFFFFFFFF
-#define TEST_DATA_MAX	(1024 * 1024)
+#define TEST_DATA_MAX	(500 * 1024)
 
 static const uint32_t test_key_ids[] = {
 	RK_OEM_OTP_KEY0,
@@ -227,7 +227,13 @@ static int test_otp_key_item_virt(uint32_t key_id, const struct test_otp_key_ite
 
 				res = rk_oem_otp_key_cipher_virt(key_id, &cipher_cfg,
 								 plain, cipher_hard, data_len);
-				if (res) {
+				if (res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
+					printf("virt:\totpkey%d\t[%s-%u]\t%s\t%s\tN/A\n",
+					       key_id, test_algo_name(algo), key_len * 8,
+					       test_mode_name(mode), test_op_name(operation));
+					res = RK_CRYPTO_SUCCESS;
+					continue;
+				} else if (res) {
 					printf("rk_oem_otp_key_cipher_virt fail! 0x%08x\n", res);
 					goto exit;
 				}
@@ -357,7 +363,13 @@ static int test_otp_key_item_fd(uint32_t key_id, const struct test_otp_key_item 
 
 				res = rk_oem_otp_key_cipher(key_id, &cipher_cfg, plain->dma_fd,
 							    cipher_hard->dma_fd, data_len);
-				if (res) {
+				if (res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
+					printf("dma_fd:\totpkey%d\t[%s-%u]\t%s\t%s\tN/A\n",
+					       key_id, test_algo_name(algo), key_len * 8,
+					       test_mode_name(mode), test_op_name(operation));
+					res = RK_CRYPTO_SUCCESS;
+					continue;
+				} else if (res) {
 					printf("rk_oem_otp_key_cipher fail! 0x%08x\n", res);
 					goto exit;
 				}

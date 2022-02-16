@@ -10,9 +10,10 @@
 #include "rkcrypto_otp_key.h"
 #include "test_utils.h"
 
-#define BLOCK_SIZE	1024 * 1024	/* 1MB */
-#define DURATION	1		/* 1s */
-#define DATA_BUTT	0xFFFFFFFF
+#define TEST_BLOCK_SIZE		1024 * 1024	/* 1MB */
+#define TEST_OTP_BLOCK_SIZE	500 * 1024
+#define DURATION		1		/* 1s */
+#define DATA_BUTT		0xFFFFFFFF
 
 static int test_otp_key_item_tp(bool is_virt, uint32_t key_id, uint32_t key_len,
 				uint32_t algo, uint32_t mode, uint32_t operation,
@@ -54,7 +55,19 @@ static int test_otp_key_item_tp(bool is_virt, uint32_t key_id, uint32_t key_len,
 		else
 			res = rk_oem_otp_key_cipher(key_id, &config, fd->dma_fd, fd->dma_fd, data_len);
 
-		if (res) {
+		if (res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
+			if (is_virt)
+				printf("virt:\totpkey\t[%s-%u]\t%s\t%s\tN/A.\n",
+				       test_algo_name(algo), key_len * 8, test_mode_name(mode),
+				       test_op_name(operation));
+			else
+				printf("dma_fd:\totpkey\t[%s-%u]\t%s\t%s\tN/A.\n",
+				       test_algo_name(algo), key_len * 8, test_mode_name(mode),
+				       test_op_name(operation));
+
+			res = RK_CRYPTO_SUCCESS;
+			continue;
+		} else if (res) {
 			printf("test rk_oem_otp_key_cipher failed! 0x%08x\n", res);
 			return res;
 		}
@@ -68,11 +81,11 @@ static int test_otp_key_item_tp(bool is_virt, uint32_t key_id, uint32_t key_len,
 	if (is_virt)
 		printf("virt:\totpkey\t[%s-%u]\t%s\t%s\t%dMB/s.\n",
 		       test_algo_name(algo), key_len * 8, test_mode_name(mode),
-		       test_op_name(operation), (data_len / (1024 * 1024)) * rounds);
+		       test_op_name(operation), (data_len * rounds / (1024 * 1024)));
 	else
 		printf("dma_fd:\totpkey\t[%s-%u]\t%s\t%s\t%dMB/s.\n",
 		       test_algo_name(algo), key_len * 8, test_mode_name(mode),
-		       test_op_name(operation), (data_len / (1024 * 1024)) * rounds);
+		       test_op_name(operation), (data_len * rounds / (1024 * 1024)));
 
 	return res;
 }
@@ -99,11 +112,11 @@ static int test_otp_key_virt_tp(void)
 	for (h = 0; h < ARRAY_SIZE(algo_tab); h++) {
 		for (j = 0; j < ARRAY_SIZE(mode_tab); j++) {
 			for (k = 0; k < ARRAY_SIZE(op_tab); k++) {
-				algo = algo_tab[h];
-				mode = mode_tab[j];
+				algo      = algo_tab[h];
+				mode      = mode_tab[j];
 				operation = op_tab[k];
-				key_id = RK_OEM_OTP_KEY3;
-				len = BLOCK_SIZE;
+				key_id    = RK_OEM_OTP_KEY3;
+				len       = TEST_OTP_BLOCK_SIZE;
 
 				if (algo == RK_ALGO_AES) {
 					key_len = 32;
@@ -152,9 +165,9 @@ static int test_otp_key_fd_tp(void)
 		return -1;
 	}
 
-	in_out = rk_crypto_mem_alloc(BLOCK_SIZE);
+	in_out = rk_crypto_mem_alloc(TEST_OTP_BLOCK_SIZE);
 	if (!in_out) {
-		printf("rk_crypto_mem_alloc %uByte error!\n", BLOCK_SIZE);
+		printf("rk_crypto_mem_alloc %uByte error!\n", TEST_OTP_BLOCK_SIZE);
 		res = -1;
 		goto out;
 	}
@@ -165,8 +178,8 @@ static int test_otp_key_fd_tp(void)
 				algo      = algo_tab[h];
 				mode      = mode_tab[j];
 				operation = op_tab[k];
-				key_id = RK_OEM_OTP_KEY3;
-				len = BLOCK_SIZE;
+				key_id    = RK_OEM_OTP_KEY3;
+				len       = TEST_OTP_BLOCK_SIZE;
 
 				if (algo == RK_ALGO_AES) {
 					key_len = 32;
@@ -276,11 +289,11 @@ static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 	if (is_virt)
 		printf("virt:\t[%s-%u]\t%s\t%s\t%dMB/s.\n",
 		       test_algo_name(algo), key_len * 8, test_mode_name(mode),
-		       test_op_name(operation), (data_len / (1024 * 1024)) * rounds);
+		       test_op_name(operation), (data_len * rounds / (1024 * 1024)));
 	else
 		printf("dma_fd:\t[%s-%u]\t%s\t%s\t%dMB/s.\n",
 		       test_algo_name(algo), key_len * 8, test_mode_name(mode),
-		       test_op_name(operation), (data_len / (1024 * 1024)) * rounds);
+		       test_op_name(operation), (data_len * rounds / (1024 * 1024)));
 
 	return res;
 error:
@@ -363,9 +376,9 @@ static int test_cipher_tp(void)
 		return -1;
 	}
 
-	in_out = rk_crypto_mem_alloc(BLOCK_SIZE);
+	in_out = rk_crypto_mem_alloc(TEST_BLOCK_SIZE);
 	if (!in_out) {
-		printf("rk_crypto_mem_alloc %uByte error!\n", BLOCK_SIZE);
+		printf("rk_crypto_mem_alloc %uByte error!\n", TEST_BLOCK_SIZE);
 		res = -1;
 		goto out;
 	}
@@ -381,7 +394,7 @@ static int test_cipher_tp(void)
 				key_len   = test_item_tbl[h].key_len;
 				mode      = test_item_tbl[h].modes[j];
 				operation = test_item_tbl[h].op[k];
-				len       = BLOCK_SIZE;
+				len       = TEST_BLOCK_SIZE;
 
 				if (test_cipher_item_tp(false, key_len, algo, mode,
 							operation, in_out, len)) {
@@ -406,7 +419,7 @@ static int test_cipher_tp(void)
 				key_len   = test_item_tbl[h].key_len;
 				mode      = test_item_tbl[h].modes[j];
 				operation = test_item_tbl[h].op[k];
-				len       = BLOCK_SIZE;
+				len       = TEST_BLOCK_SIZE;
 
 				if (test_cipher_item_tp(true, key_len, algo, mode,
 							operation, NULL, len)) {
@@ -519,10 +532,10 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 
 	if (is_virt)
 		printf("virt:\t[%12s]\t%dMB/s.\n",
-		       test_algo_name(algo), (data_len / (1024 * 1024)) * rounds);
+		       test_algo_name(algo), (data_len * rounds / (1024 * 1024)));
 	else
 		printf("virt:\t[%12s]\t%dMB/s.\n",
-		       test_algo_name(algo), (data_len / (1024 * 1024)) * rounds);
+		       test_algo_name(algo), (data_len * rounds / (1024 * 1024)));
 
 	return res;
 }
@@ -530,7 +543,7 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 static int test_hash_tp(void)
 {
 	int res;
-	uint32_t buffer_len = BLOCK_SIZE;;
+	uint32_t buffer_len = TEST_BLOCK_SIZE;;
 	rk_crypto_mem *mem_buf = NULL;
 	uint32_t i;
 
