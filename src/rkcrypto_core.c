@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <error.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/ioctl.h>
@@ -341,14 +342,14 @@ RK_RES rk_cipher_init(const rk_cipher_config *config, rk_handle *handle)
 	sess.keylen = config->key_len;
 
 	if (ioctl(cryptodev_fd, CIOCGSESSION, &sess)) {
-		E_TRACE("CIOCGSESSION error!\n");
-		res = RK_CRYPTO_ERR_GENERIC;
+		E_TRACE("CIOCGSESSION error %d!\n", errno);
+		res = (errno == ENOENT) ? RK_CRYPTO_ERR_NOT_SUPPORTED : RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
-	rk_add_sess_node(sess.ses, rk_get_config_type(config->algo, config->mode), config, NULL);
-
-	*handle = sess.ses;
+	res = rk_add_sess_node(sess.ses, rk_get_config_type(config->algo, config->mode), config, NULL);
+	if (res == RK_CRYPTO_SUCCESS)
+		*handle = sess.ses;
 exit:
 	return res;
 }
@@ -472,8 +473,8 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 	}
 
 	if (ioctl(cryptodev_fd, CIOCGSESSION, &sess)) {
-		E_TRACE("CIOCGSESSION error!\n");
-		res = RK_CRYPTO_ERR_GENERIC;
+		E_TRACE("CIOCGSESSION error %d!\n", errno);
+		res = (errno == ENOENT) ? RK_CRYPTO_ERR_NOT_SUPPORTED : RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 

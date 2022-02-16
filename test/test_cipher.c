@@ -147,9 +147,15 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 
 				res = rk_cipher_init(&cipher_cfg, &cipher_hdl);
 				if (res) {
+					if (res != RK_CRYPTO_ERR_NOT_SUPPORTED) {
+						E_TRACE("rk_cipher_init error[%x]\n", res);
+						goto exit;
+					}
+
 					printf("virt:\t[%s-%u]\t%s\t%s\tN/A\n",
 					       test_algo_name(algo), key_len * 8,
 					       test_mode_name(mode), test_op_name(operation));
+					res = RK_CRYPTO_SUCCESS;
 					continue;
 				}
 
@@ -272,9 +278,15 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 
 				res = rk_cipher_init(&cipher_cfg, &cipher_hdl);
 				if (res) {
+					if (res != RK_CRYPTO_ERR_NOT_SUPPORTED) {
+						E_TRACE("rk_cipher_init error[%x]\n", res);
+						goto exit;
+					}
+
 					printf("dma_fd:\t[%s-%u]\t%s\t%s\tN/A\n",
 					       test_algo_name(algo), key_len * 8,
 					       test_mode_name(mode), test_op_name(operation));
+					res = RK_CRYPTO_SUCCESS;
 					continue;
 				}
 
@@ -335,7 +347,11 @@ RK_RES test_cipher(void)
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t i;
 
-	rk_crypto_init();
+	res = rk_crypto_init();
+	if (res) {
+		printf("rk_crypto_init error %08x\n", res);
+		return res;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(test_item_tbl); i++) {
 		res = test_cipher_item_virt(&test_item_tbl[i]);

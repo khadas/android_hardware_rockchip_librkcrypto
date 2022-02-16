@@ -241,6 +241,11 @@ static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 
 		res = rk_cipher_init(&config, &handle);
 		if (res) {
+			if (res != RK_CRYPTO_ERR_NOT_SUPPORTED) {
+				printf("test rk_cipher_init failed! 0x%08x\n", res);
+				goto error;
+			}
+
 			if (is_virt)
 				printf("virt:\t[%s-%u]\t%s\tN/A\n",
 				       test_algo_name(algo), key_len * 8, test_mode_name(mode));
@@ -257,7 +262,7 @@ static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 
 		if (res) {
 			printf("test rk_cipher_crypt failed! 0x%08x\n", res);
-			return res;
+			goto error;
 		}
 
 		rk_cipher_final(handle);
@@ -277,6 +282,14 @@ static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 		       test_algo_name(algo), key_len * 8, test_mode_name(mode),
 		       test_op_name(operation), (data_len / (1024 * 1024)) * rounds);
 
+	return res;
+error:
+	if (is_virt)
+		printf("virt:\t[%s-%u]\t%s\tFailed.\n",
+		       test_algo_name(algo), key_len * 8, test_mode_name(mode));
+	else
+		printf("dma_fd:\t[%s-%u]\t%s\tFailed.\n",
+		       test_algo_name(algo), key_len * 8, test_mode_name(mode));
 	return res;
 }
 

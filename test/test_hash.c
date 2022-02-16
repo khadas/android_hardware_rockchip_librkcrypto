@@ -73,6 +73,11 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 
 	res = rk_hash_init(&hash_cfg, &hash_hdl);
 	if (res) {
+		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED) {
+			E_TRACE("rk_hash_init error[%x]\n", res);
+			goto exit;
+		}
+
 		printf("virt:\t[%12s]\tN/A\n", test_algo_name(algo));
 		return RK_CRYPTO_SUCCESS;
 	}
@@ -121,7 +126,6 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 		goto exit;
 	}
 
-
 	hash_hdl = 0;
 	printf("virt:\t[%12s]\tPASS\n", test_algo_name(algo));
 
@@ -165,6 +169,11 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 
 	res = rk_hash_init(&hash_cfg, &hash_hdl);
 	if (res) {
+		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED) {
+			E_TRACE("rk_hash_init error[%x]\n", res);
+			goto exit;
+		}
+
 		printf("dma_fd:\t[%12s]\tN/A\n", test_algo_name(algo));
 		return RK_CRYPTO_SUCCESS;
 	}
@@ -217,7 +226,11 @@ RK_RES test_hash(void)
 	rk_crypto_mem *mem_buf = NULL;
 	uint32_t i;
 
-	rk_crypto_init();
+	res = rk_crypto_init();
+	if (res) {
+		printf("rk_crypto_init error %08x\n", res);
+		return res;
+	}
 
 	buffer = malloc(buffer_len);
 	if (!buffer) {
@@ -256,7 +269,11 @@ RK_RES test_hmac(void)
 	rk_crypto_mem *mem_buf = NULL;
 	uint32_t i;
 
-	rk_crypto_init();
+	res = rk_crypto_init();
+	if (res) {
+		printf("rk_crypto_init error %08x\n", res);
+		return res;
+	}
 
 	buffer = malloc(buffer_len);
 	if (!buffer) {
