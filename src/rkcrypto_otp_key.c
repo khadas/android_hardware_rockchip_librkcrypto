@@ -18,6 +18,33 @@
 #define CRYPTO_SERVICE_CMD_OEM_OTP_KEY_CIPHER		0x00000001
 #define CRYPTO_SERVICE_CMD_OEM_OTP_KEY_PHYS_CIPHER	0x00000002
 
+static const struct {
+	const uint32_t tee_code;
+	const uint32_t rk_crypto_code;
+} tee_crypto_code[] = {
+	{TEEC_SUCCESS,			RK_CRYPTO_SUCCESS},
+	{TEEC_ERROR_GENERIC,		RK_CRYPTO_ERR_GENERIC},
+	{TEEC_ERROR_BAD_PARAMETERS,	RK_CRYPTO_ERR_PARAMETER},
+	{TEEC_ERROR_BAD_STATE,		RK_CRYPTO_ERR_STATE},
+	{TEEC_ERROR_NOT_SUPPORTED,	RK_CRYPTO_ERR_NOT_SUPPORTED},
+	{TEEC_ERROR_OUT_OF_MEMORY,	RK_CRYPTO_ERR_OUT_OF_MEMORY},
+	{TEEC_ERROR_ACCESS_DENIED,	RK_CRYPTO_ERR_ACCESS_DENIED},
+};
+
+static RK_RES tee_to_crypto_code(uint32_t tee_code)
+{
+	uint32_t i;
+	uint32_t array_size = sizeof(tee_crypto_code) / sizeof((tee_crypto_code)[0]);
+
+	for (i = 0; i < array_size; i++) {
+		if (tee_code == tee_crypto_code[i].tee_code)
+			return tee_crypto_code[i].rk_crypto_code;
+	}
+
+	/* Others convert to RK_CRYPTO_ERR_GENERIC. */
+	return RK_CRYPTO_ERR_GENERIC;
+}
+
 static uint32_t cipher_get_blocksize(uint32_t algo)
 {
 	switch (algo) {
@@ -58,8 +85,7 @@ RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_CRYPTO_ERR_GENERIC;
-		return res;
+		return tee_to_crypto_code(res);
 	}
 
 	res = TEEC_OpenSession(&contex, &session, &uuid, TEEC_LOGIN_PUBLIC,
@@ -67,7 +93,6 @@ RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 		goto out;
 	}
 
@@ -85,13 +110,12 @@ RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 	}
 
 	TEEC_CloseSession(&session);
 out:
 	TEEC_FinalizeContext(&contex);
-	return res;
+	return tee_to_crypto_code(res);
 }
 
 RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_written)
@@ -113,8 +137,7 @@ RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_writt
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_CRYPTO_ERR_GENERIC;
-		return res;
+		return tee_to_crypto_code(res);
 	}
 
 	res = TEEC_OpenSession(&contex, &session, &uuid, TEEC_LOGIN_PUBLIC,
@@ -122,7 +145,6 @@ RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_writt
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 		goto out;
 	}
 
@@ -137,11 +159,9 @@ RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_writt
 				 &operation, &error_origin);
 	if (res == TEEC_ERROR_ACCESS_DENIED) {
 		E_TRACE("Check if it has been set oem_hr_otp_read_lock!");
-		res = RK_CRYPTO_ERR_ACCESS_DENIED;
 	} else if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 	} else {
 		*is_written = operation.params[0].value.b;
 	}
@@ -150,7 +170,7 @@ RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_writt
 
 out:
 	TEEC_FinalizeContext(&contex);
-	return res;
+	return tee_to_crypto_code(res);
 }
 
 RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id)
@@ -170,8 +190,7 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id)
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_CRYPTO_ERR_GENERIC;
-		return res;
+		return tee_to_crypto_code(res);
 	}
 
 	res = TEEC_OpenSession(&contex, &session, &uuid, TEEC_LOGIN_PUBLIC,
@@ -179,7 +198,6 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id)
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 		goto out;
 	}
 
@@ -195,13 +213,12 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id)
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 	}
 
 	TEEC_CloseSession(&session);
 out:
 	TEEC_FinalizeContext(&contex);
-	return res;
+	return tee_to_crypto_code(res);
 }
 
 RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *config,
@@ -246,8 +263,7 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_CRYPTO_ERR_GENERIC;
-		return res;
+		return tee_to_crypto_code(res);
 	}
 
 	res = TEEC_OpenSession(&contex, &session, &uuid, TEEC_LOGIN_PUBLIC,
@@ -255,7 +271,6 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 		goto out;
 	}
 
@@ -264,7 +279,6 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	res = TEEC_AllocateSharedMemory(&contex, &sm);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("AllocateSharedMemory ERR! TEEC res= 0x%x", res);
-		res = RK_CRYPTO_ERR_GENERIC;
 		goto out1;
 	}
 
@@ -289,7 +303,6 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 	} else {
 		memcpy(dst, sm.buffer, sm.size);
 	}
@@ -301,7 +314,7 @@ out1:
 
 out:
 	TEEC_FinalizeContext(&contex);
-	return res;
+	return tee_to_crypto_code(res);
 }
 
 RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *config,
@@ -351,13 +364,13 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	dst_mop.dma_fd = out_fd;
 
 	res = rk_crypto_fd_ioctl(RIOCCRYPT_FD_MAP, &src_mop);
-	if (res != TEEC_SUCCESS) {
+	if (res != RK_CRYPTO_SUCCESS) {
 		E_TRACE("RIOCCRYPT_FD_MAP failed, res= 0x%x", res);
 		return res;
 	}
 
 	res = rk_crypto_fd_ioctl(RIOCCRYPT_FD_MAP, &dst_mop);
-	if (res != TEEC_SUCCESS) {
+	if (res != RK_CRYPTO_SUCCESS) {
 		E_TRACE("RIOCCRYPT_FD_MAP failed, res= 0x%x", res);
 		goto out;
 	}
@@ -365,7 +378,6 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_InitializeContext failed with code TEEC res= 0x%x", res);
-		res = RK_CRYPTO_ERR_GENERIC;
 		goto out1;
 	}
 
@@ -374,7 +386,6 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("TEEC_Opensession failed with code TEEC res= 0x%x origin 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 		goto out2;
 	}
 
@@ -396,7 +407,6 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	if (res != TEEC_SUCCESS) {
 		E_TRACE("InvokeCommand ERR! TEEC res= 0x%x, error_origin= 0x%x",
 			res, error_origin);
-		res = RK_CRYPTO_ERR_GENERIC;
 	}
 
 	TEEC_CloseSession(&session);
@@ -405,6 +415,7 @@ out2:
 	TEEC_FinalizeContext(&contex);
 
 out1:
+	res = tee_to_crypto_code(res);
 	rk_crypto_fd_ioctl(RIOCCRYPT_FD_UNMAP, &dst_mop);
 
 out:
