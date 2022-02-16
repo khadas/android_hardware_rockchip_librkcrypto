@@ -103,11 +103,13 @@ const struct algo_map_info algo_map_tbl[] = {
 	{RK_ALGO_SHA512,      0, CRYPTO_RK_SHA512},
 	{RK_ALGO_SHA512_224,  0, CRYPTO_RK_SHA512_224},
 	{RK_ALGO_SHA512_256,  0, CRYPTO_RK_SHA512_256},
+	{RK_ALGO_SM3,         0, CRYPTO_RK_SM3},
 
 	{RK_ALGO_HMAC_MD5,    0, CRYPTO_RK_MD5_HMAC},
 	{RK_ALGO_HMAC_SHA1,   0, CRYPTO_RK_SHA1_HMAC},
 	{RK_ALGO_HMAC_SHA256, 0, CRYPTO_RK_SHA256_HMAC},
 	{RK_ALGO_HMAC_SHA512, 0, CRYPTO_RK_SHA512_HMAC},
+	{RK_ALGO_HMAC_SM3,    0, CRYPTO_RK_SM3_HMAC},
 };
 
 static uint32_t rk_get_config_type(uint32_t algo, uint32_t mode)
