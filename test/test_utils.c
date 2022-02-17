@@ -7,7 +7,8 @@
 
 bool is_no_multi_blocksize(uint32_t mode)
 {
-	if (mode == RK_CIPHER_MODE_CTR ||
+	if (mode == RK_CIPHER_MODE_CTS ||
+	    mode == RK_CIPHER_MODE_CTR ||
 	    mode == RK_CIPHER_MODE_CFB ||
 	    mode == RK_CIPHER_MODE_OFB)
 		return true;

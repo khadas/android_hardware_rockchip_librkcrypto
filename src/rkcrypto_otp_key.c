@@ -71,16 +71,16 @@ RK_RES rk_write_oem_otp_key(enum RK_OEM_OTP_KEYID key_id, uint8_t *key,
 	uint32_t error_origin = 0;
 
 	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
-			   key_id != RK_OEM_OTP_KEY1 &&
-			   key_id != RK_OEM_OTP_KEY2 &&
-			   key_id != RK_OEM_OTP_KEY3 &&
-			   key_id != RK_OEM_OTP_KEY_FW);
+			      key_id != RK_OEM_OTP_KEY1 &&
+			      key_id != RK_OEM_OTP_KEY2 &&
+			      key_id != RK_OEM_OTP_KEY3 &&
+			      key_id != RK_OEM_OTP_KEY_FW);
 	RK_CRYPTO_CHECK_PARAM(!key);
 	RK_CRYPTO_CHECK_PARAM(key_len != 16 &&
-			   key_len != 24 &&
-			   key_len != 32);
+			      key_len != 24 &&
+			      key_len != 32);
 	RK_CRYPTO_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
-			   key_len != 16);
+			      key_len != 16);
 
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
@@ -128,10 +128,10 @@ RK_RES rk_oem_otp_key_is_written(enum RK_OEM_OTP_KEYID key_id, uint8_t *is_writt
 	uint32_t error_origin = 0;
 
 	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
-			   key_id != RK_OEM_OTP_KEY1 &&
-			   key_id != RK_OEM_OTP_KEY2 &&
-			   key_id != RK_OEM_OTP_KEY3 &&
-			   key_id != RK_OEM_OTP_KEY_FW);
+			      key_id != RK_OEM_OTP_KEY1 &&
+			      key_id != RK_OEM_OTP_KEY2 &&
+			      key_id != RK_OEM_OTP_KEY3 &&
+			      key_id != RK_OEM_OTP_KEY_FW);
 	RK_CRYPTO_CHECK_PARAM(!is_written);
 
 	res = TEEC_InitializeContext(NULL, &contex);
@@ -183,9 +183,9 @@ RK_RES rk_set_oem_hr_otp_read_lock(enum RK_OEM_OTP_KEYID key_id)
 	uint32_t error_origin = 0;
 
 	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
-			   key_id != RK_OEM_OTP_KEY1 &&
-			   key_id != RK_OEM_OTP_KEY2 &&
-			   key_id != RK_OEM_OTP_KEY3);
+			      key_id != RK_OEM_OTP_KEY1 &&
+			      key_id != RK_OEM_OTP_KEY2 &&
+			      key_id != RK_OEM_OTP_KEY3);
 
 	res = TEEC_InitializeContext(NULL, &contex);
 	if (res != TEEC_SUCCESS) {
@@ -229,35 +229,40 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 	TEEC_Session session;
 	TEEC_Operation operation;
 	TEEC_UUID uuid = RK_CRYPTO_SERVICE_UUID;
-	uint32_t error_origin = 0, len_aligned, block_size;
+	uint32_t error_origin = 0, len_aligned, len_cipher, block_size;
 	TEEC_SharedMemory sm;
 
 	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
-			   key_id != RK_OEM_OTP_KEY1 &&
-			   key_id != RK_OEM_OTP_KEY2 &&
-			   key_id != RK_OEM_OTP_KEY3 &&
-			   key_id != RK_OEM_OTP_KEY_FW);
+			      key_id != RK_OEM_OTP_KEY1 &&
+			      key_id != RK_OEM_OTP_KEY2 &&
+			      key_id != RK_OEM_OTP_KEY3 &&
+			      key_id != RK_OEM_OTP_KEY_FW);
 	RK_CRYPTO_CHECK_PARAM(!config  || !src || !dst);
 	RK_CRYPTO_CHECK_PARAM(config->algo != RK_ALGO_AES &&
-			   config->algo != RK_ALGO_SM4);
+			      config->algo != RK_ALGO_SM4);
 	RK_CRYPTO_CHECK_PARAM(config->mode >= RK_CIPHER_MODE_XTS);
 	RK_CRYPTO_CHECK_PARAM(config->operation != RK_OP_CIPHER_ENC &&
-			   config->operation != RK_OP_CIPHER_DEC);
+			      config->operation != RK_OP_CIPHER_DEC);
 	RK_CRYPTO_CHECK_PARAM(config->key_len != 16 &&
-			   config->key_len != 24 &&
-			   config->key_len != 32);
+			      config->key_len != 24 &&
+			      config->key_len != 32);
 	RK_CRYPTO_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
-			   config->key_len != 16);
+			      config->key_len != 16);
 	RK_CRYPTO_CHECK_PARAM(len > RK_CRYPTO_MAX_DATA_LEN ||
-			   len == 0);
+			      len == 0);
+	RK_CRYPTO_CHECK_PARAM(config->mode == RK_CIPHER_MODE_CTS &&
+			      len <= 16);
 
+	len_cipher = len;
 	block_size  = cipher_get_blocksize(config->algo);
-	len_aligned = ROUNDUP(len, block_size);
 
-	if (len % block_size) {
+	if (config->mode != RK_CIPHER_MODE_CTS && (len % block_size)) {
 		RK_CRYPTO_CHECK_PARAM(config->mode != RK_CIPHER_MODE_CTR &&
-		    config->mode != RK_CIPHER_MODE_CFB &&
-		    config->mode != RK_CIPHER_MODE_OFB);
+				      config->mode != RK_CIPHER_MODE_CFB &&
+				      config->mode != RK_CIPHER_MODE_OFB);
+
+		len_aligned = ROUNDUP(len, block_size);
+		len_cipher  = len_aligned;
 	}
 
 	res = TEEC_InitializeContext(NULL, &contex);
@@ -274,7 +279,7 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 		goto out;
 	}
 
-	sm.size = len_aligned;
+	sm.size = len_cipher;
 	sm.flags = TEEC_MEM_INPUT | TEEC_MEM_OUTPUT;
 	res = TEEC_AllocateSharedMemory(&contex, &sm);
 	if (res != TEEC_SUCCESS) {
@@ -282,8 +287,8 @@ RK_RES rk_oem_otp_key_cipher_virt(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config
 		goto out1;
 	}
 
+	memset(sm.buffer, 0, sm.size);
 	memcpy(sm.buffer, src, len);
-	memset((uint8_t *)sm.buffer + len, 0x00, len_aligned - len);
 
 	memset(&operation, 0, sizeof(TEEC_Operation));
 	operation.params[0].value.a       = key_id;
@@ -325,37 +330,42 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	TEEC_Session session;
 	TEEC_Operation operation;
 	TEEC_UUID uuid = RK_CRYPTO_SERVICE_UUID;
-	uint32_t error_origin = 0, len_aligned, block_size;
+	uint32_t error_origin = 0, len_aligned, len_cipher, block_size;
 	struct crypt_fd_map_op src_mop;
 	struct crypt_fd_map_op dst_mop;
 
 	RK_CRYPTO_CHECK_PARAM(in_fd < 0);
 	RK_CRYPTO_CHECK_PARAM(out_fd < 0);
 	RK_CRYPTO_CHECK_PARAM(key_id != RK_OEM_OTP_KEY0 &&
-			   key_id != RK_OEM_OTP_KEY1 &&
-			   key_id != RK_OEM_OTP_KEY2 &&
-			   key_id != RK_OEM_OTP_KEY3 &&
-			   key_id != RK_OEM_OTP_KEY_FW);
+			      key_id != RK_OEM_OTP_KEY1 &&
+			      key_id != RK_OEM_OTP_KEY2 &&
+			      key_id != RK_OEM_OTP_KEY3 &&
+			      key_id != RK_OEM_OTP_KEY_FW);
 	RK_CRYPTO_CHECK_PARAM(!config);
 	RK_CRYPTO_CHECK_PARAM(config->algo != RK_ALGO_AES &&
-			   config->algo != RK_ALGO_SM4);
+			      config->algo != RK_ALGO_SM4);
 	RK_CRYPTO_CHECK_PARAM(config->mode >= RK_CIPHER_MODE_XTS);
 	RK_CRYPTO_CHECK_PARAM(config->operation != RK_OP_CIPHER_ENC &&
-			   config->operation != RK_OP_CIPHER_DEC);
+			      config->operation != RK_OP_CIPHER_DEC);
 	RK_CRYPTO_CHECK_PARAM(config->key_len != 16 &&
-			   config->key_len != 24 &&
-			   config->key_len != 32);
+			      config->key_len != 24 &&
+			      config->key_len != 32);
 	RK_CRYPTO_CHECK_PARAM(key_id == RK_OEM_OTP_KEY_FW &&
-			   config->key_len != 16);
+			      config->key_len != 16);
 	RK_CRYPTO_CHECK_PARAM(len == 0);
+	RK_CRYPTO_CHECK_PARAM(config->mode == RK_CIPHER_MODE_CTS &&
+			      len <= 16);
 
+	len_cipher = len;
 	block_size  = cipher_get_blocksize(config->algo);
-	len_aligned = ROUNDUP(len, block_size);
 
-	if (len % block_size) {
+	if (config->mode != RK_CIPHER_MODE_CTS && (len % block_size)) {
 		RK_CRYPTO_CHECK_PARAM(config->mode != RK_CIPHER_MODE_CTR &&
-		    config->mode != RK_CIPHER_MODE_CFB &&
-		    config->mode != RK_CIPHER_MODE_OFB);
+				      config->mode != RK_CIPHER_MODE_CFB &&
+				      config->mode != RK_CIPHER_MODE_OFB);
+
+		len_aligned = ROUNDUP(len, block_size);
+		len_cipher  = len_aligned;
 	}
 
 	memset(&src_mop, 0, sizeof(src_mop));
@@ -394,7 +404,7 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 	operation.params[1].tmpref.buffer = config;
 	operation.params[1].tmpref.size   = sizeof(rk_cipher_config);
 	operation.params[2].value.a       = src_mop.phys_addr;
-	operation.params[2].value.b       = len_aligned;
+	operation.params[2].value.b       = len_cipher;
 	operation.params[3].value.a       = dst_mop.phys_addr;
 
 	operation.paramTypes = TEEC_PARAM_TYPES(TEEC_VALUE_INPUT,

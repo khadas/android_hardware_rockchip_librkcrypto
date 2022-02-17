@@ -210,6 +210,8 @@ static int test_otp_key_item_virt(uint32_t key_id, const struct test_otp_key_ite
 
 			key_len  = item->key_lens[j];
 			data_len = item->data_len;
+			if (is_no_multi_blocksize(mode))
+				data_len -= 3;
 
 			for (k = 0; k < ARRAY_SIZE(item->operations); k++) {
 				if (item->operations[k] == DATA_BUTT)
@@ -338,6 +340,8 @@ static int test_otp_key_item_fd(uint32_t key_id, const struct test_otp_key_item 
 
 			key_len  = item->key_lens[j];
 			data_len = item->data_len;
+			if (is_no_multi_blocksize(mode))
+				data_len -= 3;
 
 			for (k = 0; k < ARRAY_SIZE(item->operations); k++) {
 				if (item->operations[k] == DATA_BUTT)
