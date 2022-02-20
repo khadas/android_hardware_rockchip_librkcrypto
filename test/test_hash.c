@@ -12,7 +12,7 @@
 #include "test_utils.h"
 
 #define HASH_MAX_LEN	64
-#define TEST_DATA_MAX	(1024 * 1024)
+#define TEST_DATA_MAX	(1024 * 1024 - 31)
 
 struct test_hash_item {
 	uint32_t algo;
@@ -43,7 +43,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 				  uint8_t *buffer, uint32_t buffer_len, bool is_hmac)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
-	uint32_t data_block = 128;
+	uint32_t data_block = 32 * 1024;
 	uint32_t out_len, tmp_len;
 	uint8_t hash_soft[HASH_MAX_LEN], hash_hard[HASH_MAX_LEN];
 	uint8_t key[MAX_HASH_BLOCK_SIZE];

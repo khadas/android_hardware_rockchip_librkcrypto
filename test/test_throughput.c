@@ -3,6 +3,7 @@
  */
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include "rkcrypto_core.h"
@@ -220,12 +221,11 @@ static int test_otp_key_tp(void)
 
 static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 			       uint32_t mode, uint32_t operation,
-			       rk_crypto_mem *fd, uint32_t data_len)
+			       void *in_out, uint32_t data_len)
 {
 	uint32_t res = 0;
 	rk_handle handle = 0;
 	rk_cipher_config config;
-	uint8_t in_out[RK_CRYPTO_MAX_DATA_LEN];
 	uint32_t out_len;
 	struct timespec start, end;
 	uint64_t total_nsec, nsec;
@@ -236,10 +236,8 @@ static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 	test_get_rng(config.iv, sizeof(config.iv));
 	test_get_rng(config.key, key_len);
 
-	if (is_virt) {
-		memset(in_out, 0x00, sizeof(in_out));
+	if (is_virt)
 		test_get_rng(in_out, data_len);
-	}
 
 	config.algo      = algo;
 	config.mode      = mode;
@@ -271,7 +269,9 @@ static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 		if (is_virt)
 			res = rk_cipher_crypt_virt(handle, in_out, data_len, in_out, &out_len);
 		else
-			res = rk_cipher_crypt(handle, fd->dma_fd, data_len, fd->dma_fd, &out_len);
+			res = rk_cipher_crypt(handle,
+					      ((rk_crypto_mem *)in_out)->dma_fd, data_len,
+					      ((rk_crypto_mem *)in_out)->dma_fd, &out_len);
 
 		if (res) {
 			printf("test rk_cipher_crypt failed! 0x%08x\n", res);
@@ -311,7 +311,8 @@ static int test_cipher_tp(void)
 	int res = 0;
 	uint32_t h, j, k;
 	uint32_t algo, mode, operation, len, key_len;
-	rk_crypto_mem *in_out = NULL;
+	rk_crypto_mem *in_out_fd = NULL;
+	uint8_t *in_out_virt = NULL;
 
 	struct test_cipher_item_tp {
 		uint32_t algo;
@@ -376,9 +377,16 @@ static int test_cipher_tp(void)
 		return -1;
 	}
 
-	in_out = rk_crypto_mem_alloc(TEST_BLOCK_SIZE);
-	if (!in_out) {
+	in_out_fd = rk_crypto_mem_alloc(TEST_BLOCK_SIZE);
+	if (!in_out_fd) {
 		printf("rk_crypto_mem_alloc %uByte error!\n", TEST_BLOCK_SIZE);
+		res = -1;
+		goto out;
+	}
+
+	in_out_virt = malloc(TEST_BLOCK_SIZE);
+	if (!in_out_virt) {
+		printf("malloc %uByte error!\n", TEST_BLOCK_SIZE);
 		res = -1;
 		goto out;
 	}
@@ -397,7 +405,7 @@ static int test_cipher_tp(void)
 				len       = TEST_BLOCK_SIZE;
 
 				if (test_cipher_item_tp(false, key_len, algo, mode,
-							operation, in_out, len)) {
+							operation, in_out_fd, len)) {
 					printf("dma_fd:\ttest cipher throughput FAILED!!!\n");
 					res = -1;
 					goto out;
@@ -422,7 +430,7 @@ static int test_cipher_tp(void)
 				len       = TEST_BLOCK_SIZE;
 
 				if (test_cipher_item_tp(true, key_len, algo, mode,
-							operation, NULL, len)) {
+							operation, in_out_virt, len)) {
 					printf("virt:\ttest cipher throughput FAILED!!!\n");
 					res = -1;
 					goto out;
@@ -434,22 +442,24 @@ static int test_cipher_tp(void)
 	printf("virt:\ttest cipher throughput SUCCESS.\n");
 
 out:
-	if (in_out)
-		rk_crypto_mem_free(in_out);
+	if (in_out_fd)
+		rk_crypto_mem_free(in_out_fd);
+
+	if (in_out_virt)
+		free(in_out_virt);
 
 	rk_crypto_deinit();
 	return res;
 }
 
 static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
-			     uint32_t blocksize, rk_crypto_mem *fd, uint32_t data_len)
+			     uint32_t blocksize, void *input, uint32_t data_len)
 {
 	int res = 0;
-	uint32_t data_block = 128;
+	uint32_t data_block = data_len;
 	uint32_t out_len, tmp_len;
 	uint8_t hash[64];
 	uint8_t key[MAX_HASH_BLOCK_SIZE];
-	uint8_t buffer[RK_CRYPTO_MAX_DATA_LEN];
 	uint8_t *tmp_data;
 	rk_handle hash_hdl = 0;
 	rk_hash_config hash_cfg;
@@ -461,7 +471,8 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 
 	nsec = DURATION * 1000000000;
 
-	test_get_rng(buffer, data_len);
+	if (is_virt)
+		test_get_rng(input, data_len);
 
 	memset(hash, 0x00, sizeof(hash));
 
@@ -478,22 +489,21 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 	total_nsec = 0;
 	rounds = 0;
 
+	res = rk_hash_init(&hash_cfg, &hash_hdl);
+	if (res) {
+		if (is_virt)
+			printf("virt:\t[%12s]\tN/A\n", test_algo_name(algo));
+		else
+			printf("dma_fd:\t[%12s]\tN/A\n", test_algo_name(algo));
+		return 0;
+	}
+
 	while (total_nsec < nsec) {
 		clock_gettime(CLOCK_REALTIME, &start);
 
-		res = rk_hash_init(&hash_cfg, &hash_hdl);
-		if (res) {
-			if (is_virt)
-				printf("virt:\t[%12s]\tN/A\n", test_algo_name(algo));
-			else
-				printf("dma_fd:\t[%12s]\tN/A\n", test_algo_name(algo));
-
-			return 0;
-		}
-
 		if (is_virt) {
 			tmp_len  = data_len;
-			tmp_data = buffer;
+			tmp_data = input;
 
 			while (tmp_len) {
 				if (tmp_len > data_block) {
@@ -506,7 +516,7 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 				res = rk_hash_update_virt(hash_hdl, tmp_data, data_block, is_last);
 				if (res) {
 					printf("rk_hash_update_virt[%lu/%u] error = %d\n",
-					       (unsigned long)(tmp_data - buffer), tmp_len, res);
+					       (unsigned long)(tmp_data - (uint8_t *)input), tmp_len, res);
 					return -1;
 				}
 
@@ -515,14 +525,12 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 			}
 		} else {
 			is_last = true;
-			res = rk_hash_update(hash_hdl, fd->dma_fd, fd->size, is_last);
+			res = rk_hash_update(hash_hdl, ((rk_crypto_mem *)input)->dma_fd, data_block, is_last);
 			if (res) {
 				printf("rk_hash_update error = %d\n", res);
 				return -1;
 			}
 		}
-
-		rk_hash_final(hash_hdl, hash, &out_len);
 
 		clock_gettime(CLOCK_REALTIME, &end);
 		total_nsec += (end.tv_sec - start.tv_sec) * 1000000000 +
@@ -530,11 +538,17 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 		rounds ++;
 	}
 
+	res = rk_hash_final(hash_hdl, hash, &out_len);
+	if (res) {
+		printf("rk_hash_final error = %d\n", res);
+		return -1;
+	}
+
 	if (is_virt)
 		printf("virt:\t[%12s]\t%dMB/s.\n",
 		       test_algo_name(algo), (data_len * rounds / (1024 * 1024)));
 	else
-		printf("virt:\t[%12s]\t%dMB/s.\n",
+		printf("dma_fd:\t[%12s]\t%dMB/s.\n",
 		       test_algo_name(algo), (data_len * rounds / (1024 * 1024)));
 
 	return res;
@@ -544,7 +558,8 @@ static int test_hash_tp(void)
 {
 	int res;
 	uint32_t buffer_len = TEST_BLOCK_SIZE;;
-	rk_crypto_mem *mem_buf = NULL;
+	rk_crypto_mem *input_fd = NULL;
+	uint8_t *input_virt = NULL;
 	uint32_t i;
 
 	struct test_hash_item {
@@ -577,16 +592,24 @@ static int test_hash_tp(void)
 		return -1;
 	}
 
-	mem_buf = rk_crypto_mem_alloc(buffer_len);
-	if (!mem_buf) {
+	input_fd = rk_crypto_mem_alloc(buffer_len);
+	if (!input_fd) {
 		printf("rk_crypto_mem_alloc %uByte error!\n", buffer_len);
+		res = -1;
+		goto out;
+	}
+
+	input_virt = malloc(TEST_BLOCK_SIZE);
+	if (!input_virt) {
+		printf("malloc %uByte error!\n", TEST_BLOCK_SIZE);
+		res = -1;
 		goto out;
 	}
 
 	/* Test virt hash */
 	for (i = 0; i < ARRAY_SIZE(test_hash_tbl); i++) {
 		res = test_hash_item_tp(true, false, test_hash_tbl[i].algo,
-					test_hash_tbl[i].blocksize, NULL, buffer_len);
+					test_hash_tbl[i].blocksize, input_virt, buffer_len);
 		if (res) {
 			printf("virt:\ttest hash throughput FAILED!!!\n");
 			goto out;
@@ -598,7 +621,7 @@ static int test_hash_tp(void)
 	/* Test dma_fd hash */
 	for (i = 0; i < ARRAY_SIZE(test_hash_tbl); i++) {
 		res = test_hash_item_tp(false, false, test_hash_tbl[i].algo,
-					test_hash_tbl[i].blocksize, mem_buf, buffer_len);
+					test_hash_tbl[i].blocksize, input_fd, buffer_len);
 		if (res) {
 			printf("dma_fd:\ttest hash throughput FAILED!!!\n");
 			goto out;
@@ -610,7 +633,7 @@ static int test_hash_tp(void)
 	/* Test virt hmac */
 	for (i = 0; i < ARRAY_SIZE(test_hmac_tbl); i++) {
 		res = test_hash_item_tp(true, true, test_hmac_tbl[i].algo,
-					test_hmac_tbl[i].blocksize, NULL, buffer_len);
+					test_hmac_tbl[i].blocksize, input_virt, buffer_len);
 		if (res) {
 			printf("virt:\ttest hmac throughput FAILED!!!\n");
 			goto out;
@@ -622,7 +645,7 @@ static int test_hash_tp(void)
 	/* Test dma_fd hmac */
 	for (i = 0; i < ARRAY_SIZE(test_hmac_tbl); i++) {
 		res = test_hash_item_tp(false, true, test_hmac_tbl[i].algo,
-					test_hmac_tbl[i].blocksize, mem_buf, buffer_len);
+					test_hmac_tbl[i].blocksize, input_fd, buffer_len);
 		if (res) {
 			printf("dma_fd:\ttest hmac throughput FAILED!!!\n");
 			goto out;
@@ -632,8 +655,11 @@ static int test_hash_tp(void)
 	printf("dma_fd:\ttest hmac throughput SUCCESS.\n");
 
 out:
-	if (mem_buf)
-		rk_crypto_mem_free(mem_buf);
+	if (input_fd)
+		rk_crypto_mem_free(input_fd);
+
+	if (input_virt)
+		free(input_virt);
 
 	rk_crypto_deinit();
 
