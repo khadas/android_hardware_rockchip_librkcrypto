@@ -342,8 +342,13 @@ RK_RES rk_cipher_init(const rk_cipher_config *config, rk_handle *handle)
 	sess.keylen = config->key_len;
 
 	if (ioctl(cryptodev_fd, CIOCGSESSION, &sess)) {
-		E_TRACE("CIOCGSESSION error %d!\n", errno);
-		res = (errno == ENOENT) ? RK_CRYPTO_ERR_NOT_SUPPORTED : RK_CRYPTO_ERR_GENERIC;
+		if (errno != ENOENT) {
+			E_TRACE("CIOCGSESSION error %d!\n", errno);
+			res = RK_CRYPTO_ERR_GENERIC;
+		} else {
+			res = RK_CRYPTO_ERR_NOT_SUPPORTED ;
+		}
+
 		goto exit;
 	}
 
@@ -473,8 +478,13 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 	}
 
 	if (ioctl(cryptodev_fd, CIOCGSESSION, &sess)) {
-		E_TRACE("CIOCGSESSION error %d!\n", errno);
-		res = (errno == ENOENT) ? RK_CRYPTO_ERR_NOT_SUPPORTED : RK_CRYPTO_ERR_GENERIC;
+		if (errno != ENOENT) {
+			E_TRACE("CIOCGSESSION error %d!\n", errno);
+			res = RK_CRYPTO_ERR_GENERIC;
+		} else {
+			res = RK_CRYPTO_ERR_NOT_SUPPORTED ;
+		}
+
 		goto exit;
 	}
 
