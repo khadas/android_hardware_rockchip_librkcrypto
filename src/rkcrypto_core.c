@@ -22,6 +22,12 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
 
+#ifndef container_of
+#define container_of(ptr, type, member) ({                      \
+        const typeof(((type *) 0)->member) *__mptr = (ptr);     \
+        (type *) ((char *) __mptr - offsetof(type, member));})
+#endif
+
 enum RK_CRYPTO_CONFIG_TYPE {
 	RK_CONFIG_TYPE_CIPHER = 0,
 	RK_CONFIG_TYPE_AE,
@@ -260,6 +266,20 @@ exit:
 	return res;
 }
 
+static RK_RES rk_update_user_iv(const rk_cipher_config *cfg)
+{
+	struct sess_id_node *node;
+
+	node = container_of(cfg, struct sess_id_node, config.cipher);
+	if (!node)
+		return RK_CRYPTO_ERR_STATE;
+
+	if (node->priv)
+		memcpy(node->priv, cfg->iv, sizeof(cfg->iv));
+
+	return RK_CRYPTO_SUCCESS;
+}
+
 RK_RES rk_crypto_init(void)
 {
 	I_TRACE("%s\n", RK_CRYPTO_API_FULL_VERSION);
@@ -352,7 +372,7 @@ RK_RES rk_cipher_init(const rk_cipher_config *config, rk_handle *handle)
 		goto exit;
 	}
 
-	res = rk_add_sess_node(sess.ses, rk_get_config_type(config->algo, config->mode), config, NULL);
+	res = rk_add_sess_node(sess.ses, rk_get_config_type(config->algo, config->mode), config, (void *)config->iv);
 	if (res == RK_CRYPTO_SUCCESS)
 		*handle = sess.ses;
 exit:
@@ -383,9 +403,15 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 	cryp.dst_fd = out_fd;
 	cryp.iv     = (void *)cipher_cfg->iv;
 	cryp.op     = (cipher_cfg->operation == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT;
+	cryp.flags  = COP_FLAG_WRITE_IV;
 
 	if (ioctl(cryptodev_fd, RIOCCRYPT_FD, &cryp)) {
 		E_TRACE("RIOCCRYPT_FD error!\n");
+		return RK_CRYPTO_ERR_GENERIC;
+	}
+
+	if (rk_update_user_iv(cipher_cfg)) {
+		E_TRACE("rk_update_user_iv error!\n");
 		return RK_CRYPTO_ERR_GENERIC;
 	}
 
@@ -412,15 +438,21 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 	memset(&cryp, 0, sizeof(cryp));
 
 	/* Encrypt data.in to data.encrypted */
-	cryp.ses = handle;
-	cryp.len = in_len;
-	cryp.src = (void *)in;
-	cryp.dst = out;
-	cryp.iv  = (void *)cipher_cfg->iv;
-	cryp.op  = (cipher_cfg->operation == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT;
+	cryp.ses   = handle;
+	cryp.len   = in_len;
+	cryp.src   = (void *)in;
+	cryp.dst   = out;
+	cryp.iv    = (void *)cipher_cfg->iv;
+	cryp.op    = (cipher_cfg->operation == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT;
+	cryp.flags = COP_FLAG_WRITE_IV;
 
 	if (ioctl(cryptodev_fd, CIOCCRYPT, &cryp)) {
 		E_TRACE("CIOCCRYPT error!\n");
+		return RK_CRYPTO_ERR_GENERIC;
+	}
+
+	if (rk_update_user_iv(cipher_cfg)) {
+		E_TRACE("rk_update_user_iv error!\n");
 		return RK_CRYPTO_ERR_GENERIC;
 	}
 

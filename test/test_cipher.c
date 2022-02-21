@@ -13,6 +13,7 @@
 
 #define DATA_BUTT	0xFFFFFFFF
 #define TEST_DATA_MAX	(1024 * 1024)
+#define MULTI_BLOCKSIZE	(256 * 1024)
 
 struct test_cipher_item {
 	uint32_t algo;
@@ -92,6 +93,9 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 	rk_cipher_config cipher_cfg;
 	uint8_t *plain = NULL, *cipher_soft = NULL, *cipher_hard = NULL;
 	uint32_t algo = 0, mode = 0, key_len, iv_len, operation;
+	uint32_t loop_nbytes, tmp_len;
+	uint8_t *tmp_data_in, *tmp_data_out;
+	uint8_t iv_tmp[AES_BLOCK_SIZE];
 
 	plain = malloc(data_len);
 	if (!plain) {
@@ -144,6 +148,7 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 
 				test_get_rng(cipher_cfg.key, key_len);
 				test_get_rng(cipher_cfg.iv, iv_len);
+				memcpy(iv_tmp, cipher_cfg.iv, iv_len);
 
 				res = rk_cipher_init(&cipher_cfg, &cipher_hdl);
 				if (res) {
@@ -164,15 +169,29 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 				else
 					data_len = TEST_DATA_MAX;
 
-				res = rk_cipher_crypt_virt(cipher_hdl, plain, data_len,
-							   cipher_hard, &out_len);
-				if (res) {
-					E_TRACE("rk_cipher_crypt_virt error[%x]\n", res);
-					goto exit;
+				/* chain multi crypt */
+				loop_nbytes  = data_len;
+				tmp_data_in  = plain;
+				tmp_data_out = cipher_hard;
+
+				while (loop_nbytes) {
+
+					tmp_len = loop_nbytes > MULTI_BLOCKSIZE ? MULTI_BLOCKSIZE : loop_nbytes;
+
+					res = rk_cipher_crypt_virt(cipher_hdl, tmp_data_in, tmp_len,
+								   tmp_data_out, &out_len);
+					if (res) {
+						E_TRACE("rk_cipher_crypt_virt error[%x]\n", res);
+						goto exit;
+					}
+
+					tmp_data_in  += tmp_len;
+					tmp_data_out += tmp_len;
+					loop_nbytes  -= tmp_len;
 				}
 
 				res = soft_cipher(algo, mode, operation,
-						  cipher_cfg.key, cipher_cfg.key_len, cipher_cfg.iv,
+						  cipher_cfg.key, cipher_cfg.key_len, iv_tmp,
 						  plain, data_len, cipher_soft);
 				if (res) {
 					E_TRACE("soft_cipher error[%x]\n", res);
@@ -226,6 +245,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 	rk_cipher_config cipher_cfg;
 	rk_crypto_mem *plain = NULL, *cipher_soft = NULL, *cipher_hard = NULL;
 	uint32_t algo = 0, mode = 0, key_len, iv_len, operation;
+	uint8_t iv_tmp[AES_BLOCK_SIZE];
 
 	plain = rk_crypto_mem_alloc(data_len);
 	if (!plain) {
@@ -275,6 +295,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 
 				test_get_rng(cipher_cfg.key, key_len);
 				test_get_rng(cipher_cfg.iv, iv_len);
+				memcpy(iv_tmp, cipher_cfg.iv, iv_len);
 
 				res = rk_cipher_init(&cipher_cfg, &cipher_hdl);
 				if (res) {
@@ -303,7 +324,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 				}
 
 				res = soft_cipher(algo, mode, operation,
-						  cipher_cfg.key, cipher_cfg.key_len, cipher_cfg.iv,
+						  cipher_cfg.key, cipher_cfg.key_len, iv_tmp,
 						  plain->vaddr, data_len, cipher_soft->vaddr);
 				if (res) {
 					E_TRACE("soft_cipher error[%x]\n", res);
