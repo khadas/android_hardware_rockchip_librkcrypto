@@ -6,7 +6,7 @@
 
 #include "rkcrypto_common.h"
 
-RK_RES test_hash(void);
-RK_RES test_hmac(void);
+RK_RES test_hash(int verbose);
+RK_RES test_hmac(int verbose);
 
 #endif

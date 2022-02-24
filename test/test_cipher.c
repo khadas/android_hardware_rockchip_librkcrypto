@@ -83,7 +83,7 @@ static struct test_cipher_item test_item_tbl[] = {
 
 };
 
-static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
+static RK_RES test_cipher_item_virt(const struct test_cipher_item *item, int verbose)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t i, j, k;
@@ -157,9 +157,11 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 						goto exit;
 					}
 
-					printf("virt:\t[%s-%u]\t%s\t%s\tN/A\n",
-					       test_algo_name(algo), key_len * 8,
-					       test_mode_name(mode), test_op_name(operation));
+					if (verbose)
+						printf("virt:\t[%s-%u]\t%s\t%s\tN/A\n",
+						       test_algo_name(algo), key_len * 8,
+						       test_mode_name(mode),
+						       test_op_name(operation));
 					res = RK_CRYPTO_SUCCESS;
 					continue;
 				}
@@ -209,9 +211,10 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item)
 
 				rk_cipher_final(cipher_hdl);
 				cipher_hdl = 0;
-				printf("virt:\t[%s-%u]\t%s\t%s\tPASS\n",
-				       test_algo_name(algo), key_len * 8,
-				       test_mode_name(mode), test_op_name(operation));
+				if (verbose)
+					printf("virt:\t[%s-%u]\t%s\t%s\tPASS\n",
+					       test_algo_name(algo), key_len * 8,
+					       test_mode_name(mode), test_op_name(operation));
 			}
 		}
 	}
@@ -235,7 +238,7 @@ exit:
 	return res;
 }
 
-static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
+static RK_RES test_cipher_item_fd(const struct test_cipher_item *item, int verbose)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t i, j, k;
@@ -304,9 +307,10 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 						goto exit;
 					}
 
-					printf("dma_fd:\t[%s-%u]\t%s\t%s\tN/A\n",
-					       test_algo_name(algo), key_len * 8,
-					       test_mode_name(mode), test_op_name(operation));
+					if (verbose)
+						printf("dma_fd:\t[%s-%u]\t%s\t%s\tN/A\n",
+						       test_algo_name(algo), key_len * 8,
+						       test_mode_name(mode), test_op_name(operation));
 					res = RK_CRYPTO_SUCCESS;
 					continue;
 				}
@@ -342,9 +346,10 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item)
 
 				rk_cipher_final(cipher_hdl);
 				cipher_hdl = 0;
-				printf("dma_fd:\t[%s-%u]\t%s\t%s\tPASS\n",
-				       test_algo_name(algo), key_len * 8,
-				       test_mode_name(mode), test_op_name(operation));
+				if (verbose)
+					printf("dma_fd:\t[%s-%u]\t%s\t%s\tPASS\n",
+					       test_algo_name(algo), key_len * 8,
+					       test_mode_name(mode), test_op_name(operation));
 			}
 		}
 	}
@@ -363,7 +368,7 @@ exit:
 	return res;
 }
 
-RK_RES test_cipher(void)
+RK_RES test_cipher(int verbose)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t i;
@@ -375,17 +380,18 @@ RK_RES test_cipher(void)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(test_item_tbl); i++) {
-		res = test_cipher_item_virt(&test_item_tbl[i]);
+		res = test_cipher_item_virt(&test_item_tbl[i], verbose);
 		if (res)
 			goto exit;
 
-		res = test_cipher_item_fd(&test_item_tbl[i]);
+		res = test_cipher_item_fd(&test_item_tbl[i], verbose);
 		if (res)
 			goto exit;
-		printf("\n");
+		if (verbose)
+			printf("\n");
 	}
 exit:
 	rk_crypto_deinit();
-	return 0;
+	return res;
 }
 

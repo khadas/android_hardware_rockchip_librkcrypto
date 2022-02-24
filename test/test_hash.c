@@ -40,7 +40,7 @@ static struct test_hash_item test_hmac_tbl[] = {
 };
 
 static RK_RES test_hash_item_virt(const struct test_hash_item *item,
-				  uint8_t *buffer, uint32_t buffer_len, bool is_hmac)
+				  uint8_t *buffer, uint32_t buffer_len, bool is_hmac, int verbose)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t data_block = 32 * 1024;
@@ -78,7 +78,8 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 			goto exit;
 		}
 
-		printf("virt:\t[%12s]\tN/A\n", test_algo_name(algo));
+		if (verbose)
+			printf("virt:\t[%12s]\tN/A\n", test_algo_name(algo));
 		return RK_CRYPTO_SUCCESS;
 	}
 
@@ -127,7 +128,8 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 	}
 
 	hash_hdl = 0;
-	printf("virt:\t[%12s]\tPASS\n", test_algo_name(algo));
+	if (verbose)
+		printf("virt:\t[%12s]\tPASS\n", test_algo_name(algo));
 
 	res = RK_CRYPTO_SUCCESS;
 exit:
@@ -138,7 +140,7 @@ exit:
 }
 
 static RK_RES test_hash_item_fd(const struct test_hash_item *item,
-				rk_crypto_mem *buffer, bool is_hmac)
+				rk_crypto_mem *buffer, bool is_hmac, int verbose)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t out_len;
@@ -174,7 +176,9 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 			goto exit;
 		}
 
-		printf("dma_fd:\t[%12s]\tN/A\n", test_algo_name(algo));
+		if (verbose)
+			printf("dma_fd:\t[%12s]\tN/A\n", test_algo_name(algo));
+
 		return RK_CRYPTO_SUCCESS;
 	}
 
@@ -208,7 +212,8 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 
 
 	hash_hdl = 0;
-	printf("dma_fd:\t[%12s]\tPASS\n", test_algo_name(algo));
+	if (verbose)
+		printf("dma_fd:\t[%12s]\tPASS\n", test_algo_name(algo));
 
 	res = RK_CRYPTO_SUCCESS;
 exit:
@@ -218,7 +223,7 @@ exit:
 	return res;
 }
 
-RK_RES test_hash(void)
+RK_RES test_hash(int verbose)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint8_t *buffer = NULL;
@@ -245,11 +250,11 @@ RK_RES test_hash(void)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(test_hash_tbl); i++) {
-		res = test_hash_item_virt(&test_hash_tbl[i], buffer, buffer_len, false);
+		res = test_hash_item_virt(&test_hash_tbl[i], buffer, buffer_len, false, verbose);
 		if (res)
 			goto exit;
 
-		res = test_hash_item_fd(&test_hash_tbl[i], mem_buf, false);
+		res = test_hash_item_fd(&test_hash_tbl[i], mem_buf, false, verbose);
 		if (res)
 			goto exit;
 	}
@@ -258,10 +263,10 @@ exit:
 	rk_crypto_deinit();
 	if (buffer)
 		free(buffer);
-	return 0;
+	return res;
 }
 
-RK_RES test_hmac(void)
+RK_RES test_hmac(int verbose)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint8_t *buffer = NULL;
@@ -288,11 +293,11 @@ RK_RES test_hmac(void)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(test_hmac_tbl); i++) {
-		res = test_hash_item_virt(&test_hmac_tbl[i], buffer, buffer_len, true);
+		res = test_hash_item_virt(&test_hmac_tbl[i], buffer, buffer_len, true, verbose);
 		if (res)
 			goto exit;
 
-		res = test_hash_item_fd(&test_hmac_tbl[i], mem_buf, true);
+		res = test_hash_item_fd(&test_hmac_tbl[i], mem_buf, true, verbose);
 		if (res)
 			goto exit;
 	}
@@ -301,5 +306,5 @@ exit:
 	rk_crypto_deinit();
 	if (buffer)
 		free(buffer);
-	return 0;
+	return res;
 }
