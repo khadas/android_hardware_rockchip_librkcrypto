@@ -67,6 +67,32 @@ pthread_mutex_t sess_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define IS_CRYPTO_INVALID()	(cryptodev_fd < 0)
 
+static const struct {
+	const uint32_t kernel_code;
+	const uint32_t rk_crypto_code;
+} kernel_crypto_code[] = {
+	{0,			RK_CRYPTO_SUCCESS},
+	{-EINVAL,		RK_CRYPTO_ERR_PARAMETER},
+	{-ENOENT,		RK_CRYPTO_ERR_NOT_SUPPORTED},
+	{-ENOMEM,		RK_CRYPTO_ERR_OUT_OF_MEMORY},
+	{-EACCES,		RK_CRYPTO_ERR_ACCESS_DENIED},
+	{-EBUSY,		RK_CRYPTO_ERR_BUSY},
+	{-ETIMEDOUT,		RK_CRYPTO_ERR_TIMEOUT},
+};
+
+static RK_RES kernel_to_crypto_code(uint32_t tee_code)
+{
+	uint32_t i;
+
+	for (i = 0; i < ARRAY_SIZE(kernel_crypto_code); i++) {
+		if (tee_code == kernel_crypto_code[i].kernel_code)
+			return kernel_crypto_code[i].rk_crypto_code;
+	}
+
+	/* Others convert to RK_CRYPTO_ERR_GENERIC. */
+	return RK_CRYPTO_ERR_GENERIC;
+}
+
 const struct algo_map_info algo_map_tbl[] = {
 	{RK_ALGO_DES,  RK_CIPHER_MODE_ECB,     CRYPTO_RK_DES_ECB},
 	{RK_ALGO_DES,  RK_CIPHER_MODE_CBC,     CRYPTO_RK_DES_CBC},
@@ -161,6 +187,11 @@ static uint32_t rk_get_hash_len(uint32_t algo)
 	default:
 		return 0;
 	}
+}
+
+static RK_RES xioctl(int fd, unsigned long int request, void *arg)
+{
+	return ioctl(fd, request, arg) ? kernel_to_crypto_code(-errno) : RK_CRYPTO_SUCCESS;
 }
 
 static RK_RES rk_get_crypto_id(uint32_t algo, uint32_t mode, uint32_t *crypto_id)
@@ -293,7 +324,7 @@ RK_RES rk_crypto_init(void)
 		cryptodev_fd = open("/dev/crypto", O_RDWR, 0);
 		if (cryptodev_fd < 0) {
 			E_TRACE("open cryptodev error!\n");
-			return RK_CRYPTO_ERR_GENERIC;
+			return kernel_to_crypto_code(-errno);
 		}
 
 		/* Set close-on-exec (not really neede here) */
@@ -361,14 +392,10 @@ RK_RES rk_cipher_init(const rk_cipher_config *config, rk_handle *handle)
 	sess.key    = (__u8 *)config->key;
 	sess.keylen = config->key_len;
 
-	if (ioctl(cryptodev_fd, CIOCGSESSION, &sess)) {
-		if (errno != ENOENT) {
+	res = xioctl(cryptodev_fd, CIOCGSESSION, &sess);
+	if (res) {
+		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED)
 			E_TRACE("CIOCGSESSION error %d!\n", errno);
-			res = RK_CRYPTO_ERR_GENERIC;
-		} else {
-			res = RK_CRYPTO_ERR_NOT_SUPPORTED ;
-		}
-
 		goto exit;
 	}
 
@@ -384,6 +411,7 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 {
 	struct crypt_fd_op cryp;
 	rk_cipher_config *cipher_cfg;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 
 	if (IS_CRYPTO_INVALID())
 		return RK_CRYPTO_ERR_PARAMETER;
@@ -405,19 +433,22 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 	cryp.op     = (cipher_cfg->operation == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT;
 	cryp.flags  = COP_FLAG_WRITE_IV;
 
-	if (ioctl(cryptodev_fd, RIOCCRYPT_FD, &cryp)) {
+	res = xioctl(cryptodev_fd, RIOCCRYPT_FD, &cryp);
+	if (res) {
 		E_TRACE("RIOCCRYPT_FD error!\n");
-		return RK_CRYPTO_ERR_GENERIC;
+		goto exit;
 	}
 
-	if (rk_update_user_iv(cipher_cfg)) {
+	res = rk_update_user_iv(cipher_cfg);
+	if (res) {
 		E_TRACE("rk_update_user_iv error!\n");
-		return RK_CRYPTO_ERR_GENERIC;
+		goto exit;
 	}
 
 	*out_len = in_len;
 
-	return RK_CRYPTO_SUCCESS;
+exit:
+	return res;
 }
 
 RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len,
@@ -425,6 +456,7 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 {
 	struct crypt_op cryp;
 	rk_cipher_config *cipher_cfg;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 
 	if (IS_CRYPTO_INVALID())
 		return RK_CRYPTO_ERR_PARAMETER;
@@ -446,29 +478,35 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 	cryp.op    = (cipher_cfg->operation == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT;
 	cryp.flags = COP_FLAG_WRITE_IV;
 
-	if (ioctl(cryptodev_fd, CIOCCRYPT, &cryp)) {
+	res = xioctl(cryptodev_fd, CIOCCRYPT, &cryp);
+	if (res) {
 		E_TRACE("CIOCCRYPT error!\n");
-		return RK_CRYPTO_ERR_GENERIC;
+		goto exit;
 	}
 
-	if (rk_update_user_iv(cipher_cfg)) {
+	res = rk_update_user_iv(cipher_cfg);
+	if (res) {
 		E_TRACE("rk_update_user_iv error!\n");
-		return RK_CRYPTO_ERR_GENERIC;
+		goto exit;
 	}
 
 	*out_len = in_len;
 
-	return RK_CRYPTO_SUCCESS;
+exit:
+	return res;
 }
 
 RK_RES rk_cipher_final(rk_handle handle)
 {
+	RK_RES res;
+
 	if (IS_CRYPTO_INVALID())
 		return RK_CRYPTO_ERR_PARAMETER;
 
-	if (ioctl(cryptodev_fd, CIOCFSESSION, &handle)) {
+	res = xioctl(cryptodev_fd, CIOCFSESSION, &handle);
+	if (res) {
 		E_TRACE("CIOCFSESSION error!");
-		return RK_CRYPTO_ERR_GENERIC;
+		return res;
 	}
 
 	return rk_del_sess_node(handle);
@@ -509,14 +547,10 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 		sess.mackeylen = config->key_len;
 	}
 
-	if (ioctl(cryptodev_fd, CIOCGSESSION, &sess)) {
-		if (errno != ENOENT) {
+	res = xioctl(cryptodev_fd, CIOCGSESSION, &sess);
+	if (res) {
+		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED)
 			E_TRACE("CIOCGSESSION error %d!\n", errno);
-			res = RK_CRYPTO_ERR_GENERIC;
-		} else {
-			res = RK_CRYPTO_ERR_NOT_SUPPORTED ;
-		}
-
 		goto exit;
 	}
 
@@ -533,6 +567,7 @@ RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len, bool is_
 	struct sess_id_node *node;
 	rk_hash_config *hash_cfg;
 	struct hash_result *result;
+	RK_RES res;
 
 	if (IS_CRYPTO_INVALID())
 		return RK_CRYPTO_ERR_PARAMETER;
@@ -554,9 +589,10 @@ RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len, bool is_
 	cryp.mac    = result->hash;
 	cryp.flags  = is_last ? COP_FLAG_FINAL : COP_FLAG_UPDATE;
 
-	if (ioctl(cryptodev_fd, RIOCCRYPT_FD, &cryp)) {
+	res = xioctl(cryptodev_fd, RIOCCRYPT_FD, &cryp);
+	if (res) {
 		E_TRACE("RIOCCRYPT_FD error!\n");
-		return RK_CRYPTO_ERR_GENERIC;
+		return res;
 	}
 
 	if (is_last)
@@ -571,6 +607,7 @@ RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_
 	struct sess_id_node *node;
 	rk_hash_config *hash_cfg;
 	struct hash_result *result;
+	RK_RES res;
 
 	if (IS_CRYPTO_INVALID())
 		return RK_CRYPTO_ERR_PARAMETER;
@@ -592,9 +629,10 @@ RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_
 	cryp.mac   = result->hash;
 	cryp.flags = is_last ? COP_FLAG_FINAL : COP_FLAG_UPDATE;
 
-	if (ioctl(cryptodev_fd, CIOCCRYPT, &cryp)) {
+	res = xioctl(cryptodev_fd, CIOCCRYPT, &cryp);
+	if (res) {
 		E_TRACE("CIOCCRYPT error!\n");
-		return RK_CRYPTO_ERR_GENERIC;
+		return res;
 	}
 
 	if (is_last)
@@ -632,10 +670,9 @@ RK_RES rk_hash_final(rk_handle handle, uint8_t *hash, uint32_t *hash_len)
 			*hash_len = result->len;
 	}
 exit:
-	if (ioctl(cryptodev_fd, CIOCFSESSION, &handle)) {
+	res = xioctl(cryptodev_fd, CIOCFSESSION, &handle);
+	if (res)
 		E_TRACE("CIOCFSESSION error!");
-		res = RK_CRYPTO_ERR_GENERIC;
-	}
 
 	if (node->priv)
 		free(node->priv);
@@ -647,13 +684,16 @@ exit:
 
 RK_RES rk_crypto_fd_ioctl(uint32_t request, struct crypt_fd_map_op *mop)
 {
+	RK_RES res;
+
 	RK_CRYPTO_CHECK_PARAM(request != RIOCCRYPT_FD_MAP &&
 			   request != RIOCCRYPT_FD_UNMAP);
 	RK_CRYPTO_CHECK_PARAM(!mop);
 
-	if (ioctl(cryptodev_fd, request, mop)) {
+	res = xioctl(cryptodev_fd, request, mop);
+	if (res) {
 		E_TRACE("ioctl cryptodev_fd failed!");
-		return RK_CRYPTO_ERR_GENERIC;
+		return res;
 	}
 
 	return RK_CRYPTO_SUCCESS;
