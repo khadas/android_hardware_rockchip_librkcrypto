@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include "rkcrypto_core.h"
 #include "rkcrypto_mem.h"
 #include "rkcrypto_otp_key.h"
@@ -313,6 +314,7 @@ static int test_cipher_tp(void)
 	uint32_t algo, mode, operation, len, key_len;
 	rk_crypto_mem *in_out_fd = NULL;
 	uint8_t *in_out_virt = NULL;
+	size_t page_size = getpagesize();
 
 	struct test_cipher_item_tp {
 		uint32_t algo;
@@ -384,8 +386,7 @@ static int test_cipher_tp(void)
 		goto out;
 	}
 
-	in_out_virt = malloc(TEST_BLOCK_SIZE);
-	if (!in_out_virt) {
+	if (posix_memalign((void *)&in_out_virt, page_size, TEST_BLOCK_SIZE) || !in_out_virt) {
 		printf("malloc %uByte error!\n", TEST_BLOCK_SIZE);
 		res = -1;
 		goto out;
@@ -561,6 +562,7 @@ static int test_hash_tp(void)
 	rk_crypto_mem *input_fd = NULL;
 	uint8_t *input_virt = NULL;
 	uint32_t i;
+	size_t page_size = getpagesize();
 
 	struct test_hash_item {
 		uint32_t algo;
@@ -599,8 +601,7 @@ static int test_hash_tp(void)
 		goto out;
 	}
 
-	input_virt = malloc(TEST_BLOCK_SIZE);
-	if (!input_virt) {
+	if (posix_memalign((void *)&input_virt, page_size, TEST_BLOCK_SIZE) || !input_virt) {
 		printf("malloc %uByte error!\n", TEST_BLOCK_SIZE);
 		res = -1;
 		goto out;

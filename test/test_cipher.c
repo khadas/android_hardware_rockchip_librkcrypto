@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include "rkcrypto_core.h"
 #include "rkcrypto_mem.h"
 #include "rkcrypto_trace.h"
@@ -96,21 +97,19 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item, int ver
 	uint32_t loop_nbytes, tmp_len;
 	uint8_t *tmp_data_in, *tmp_data_out;
 	uint8_t iv_tmp[AES_BLOCK_SIZE];
+	size_t page_size = getpagesize();
 
-	plain = malloc(data_len);
-	if (!plain) {
+	if (posix_memalign((void *)&plain, page_size, data_len) || !plain) {
 		E_TRACE("plain malloc %uByte error!\n", data_len);
 		goto exit;
 	}
 
-	cipher_soft = malloc(data_len);
-	if (!cipher_soft) {
+	if (posix_memalign((void *)&cipher_soft, page_size, data_len) || !cipher_soft) {
 		E_TRACE("cipher_soft malloc %uByte error!\n", data_len);
 		goto exit;
 	}
 
-	cipher_hard = malloc(data_len);
-	if (!cipher_hard) {
+	if (posix_memalign((void *)&cipher_hard, page_size, data_len) || !cipher_hard) {
 		E_TRACE("cipher_hard malloc %uByte error!\n", data_len);
 		goto exit;
 	}
