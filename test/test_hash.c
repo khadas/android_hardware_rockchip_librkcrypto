@@ -87,22 +87,15 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 	tmp_data = buffer;
 
 	while (tmp_len) {
-		if (tmp_len > data_block) {
-			res = rk_hash_update_virt(hash_hdl, tmp_data, data_block, false);
-			if (res) {
-				E_TRACE("rk_hash_update_virt[%lu/%u] error = %d\n",
-					(unsigned long)(tmp_data - buffer), tmp_len, res);
-				goto exit;
-			}
-		} else {
-			data_block = tmp_len;
-			res = rk_hash_update_virt(hash_hdl, tmp_data, tmp_len, true);
-			if (res) {
-				E_TRACE("rk_hash_update_virt[%lu/%u] error = %d\n",
-					(unsigned long)(tmp_data - buffer), tmp_len, res);
-				goto exit;
-			}
+		data_block = tmp_len > data_block ? data_block : tmp_len;
+
+		res = rk_hash_update_virt(hash_hdl, tmp_data, data_block);
+		if (res) {
+			E_TRACE("rk_hash_update_virt[%lu/%u] error = %d\n",
+				(unsigned long)(tmp_data - buffer), tmp_len, res);
+			goto exit;
 		}
+
 		tmp_len -= data_block;
 		tmp_data += data_block;
 	}
@@ -182,7 +175,7 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 		return RK_CRYPTO_SUCCESS;
 	}
 
-	res = rk_hash_update(hash_hdl, buffer->dma_fd, buffer->size, true);
+	res = rk_hash_update(hash_hdl, buffer->dma_fd, buffer->size);
 	if (res) {
 		E_TRACE("rk_hash_update error = %d\n", res);
 		goto exit;
@@ -217,8 +210,10 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 
 	res = RK_CRYPTO_SUCCESS;
 exit:
-	if (res)
+	if (res) {
+		rk_hash_final(hash_hdl, NULL, NULL);
 		printf("dma_fd:\t[%12s]\tFAIL\n", test_algo_name(algo));
+	}
 
 	return res;
 }

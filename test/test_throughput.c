@@ -465,7 +465,6 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 	rk_handle hash_hdl = 0;
 	rk_hash_config hash_cfg;
 	uint32_t key_len;
-	bool is_last = false;
 	struct timespec start, end;
 	uint64_t total_nsec, nsec;
 	uint32_t rounds;
@@ -503,33 +502,28 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 		clock_gettime(CLOCK_REALTIME, &start);
 
 		if (is_virt) {
-			tmp_len  = data_len;
-			tmp_data = input;
+			tmp_len    = data_len;
+			tmp_data   = input;
+			data_block = data_len;
 
 			while (tmp_len) {
-				if (tmp_len > data_block) {
-					is_last = false;
-				} else {
-					is_last = true;
-					data_block = tmp_len;
-				}
+				data_block = tmp_len > data_block ? data_block : tmp_len;
 
-				res = rk_hash_update_virt(hash_hdl, tmp_data, data_block, is_last);
+				res = rk_hash_update_virt(hash_hdl, tmp_data, data_block);
 				if (res) {
 					printf("rk_hash_update_virt[%lu/%u] error = %d\n",
 					       (unsigned long)(tmp_data - (uint8_t *)input), tmp_len, res);
-					return -1;
+					goto error;
 				}
 
 				tmp_len -= data_block;
 				tmp_data += data_block;
 			}
 		} else {
-			is_last = true;
-			res = rk_hash_update(hash_hdl, ((rk_crypto_mem *)input)->dma_fd, data_block, is_last);
+			res = rk_hash_update(hash_hdl, ((rk_crypto_mem *)input)->dma_fd, data_block);
 			if (res) {
 				printf("rk_hash_update error = %d\n", res);
-				return -1;
+				goto error;
 			}
 		}
 
@@ -552,6 +546,9 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 		printf("dma_fd:\t[%12s]\t%dMB/s.\n",
 		       test_algo_name(algo), (data_len * rounds / (1024 * 1024)));
 
+	return res;
+error:
+	rk_hash_final(hash_hdl, NULL, NULL);
 	return res;
 }
 

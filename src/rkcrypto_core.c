@@ -526,20 +526,11 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 	RK_RES res;
 	struct session_op sess;
 	uint32_t crypto_id = 0;
-	struct hash_result *result = NULL;
 
 	CHECK_CRYPTO_INITED();
 
 	RK_CRYPTO_CHECK_PARAM(!config || !handle);
 
-	result = malloc(sizeof(*result));
-	if (!result) {
-		E_TRACE("malloc result buffer error!\n");
-		res = RK_CRYPTO_ERR_OUT_OF_MEMORY;
-		goto exit;
-	}
-
-	memset(result, 0x00, sizeof(*result));
 	memset(&sess, 0, sizeof(sess));
 
 	res = rk_get_crypto_id(config->algo, 0, &crypto_id);
@@ -561,41 +552,29 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 		goto exit;
 	}
 
-	rk_add_sess_node(sess.ses, rk_get_config_type(config->algo, 0), config, result);
+	rk_add_sess_node(sess.ses, rk_get_config_type(config->algo, 0), config, NULL);
 
 	*handle = sess.ses;
 exit:
 	return res;
 }
 
-RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len, bool is_last)
+RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len)
 {
 	struct crypt_fd_op cryp;
-	struct sess_id_node *node;
-	rk_hash_config *hash_cfg;
-	struct hash_result *result;
 	RK_RES res;
 
 	CHECK_CRYPTO_INITED();
 
 	RK_CRYPTO_CHECK_PARAM(data_len == 0);
 
-	node = rk_get_sess_node(handle);
-	if (!node) {
-		E_TRACE("handle[%u] rk_get_sess_node  error!\n", handle);
-		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
-	}
-
-	result = node->priv;
-	hash_cfg = &node->config.hash;
-
 	memset(&cryp, 0, sizeof(cryp));
 
 	cryp.ses    = handle;
 	cryp.len    = data_len;
 	cryp.src_fd = data_fd;
-	cryp.mac    = result->hash;
-	cryp.flags  = is_last ? COP_FLAG_FINAL : COP_FLAG_UPDATE;
+	cryp.mac    = NULL;
+	cryp.flags  = COP_FLAG_UPDATE;
 
 	res = xioctl(cryptodev_fd, RIOCCRYPT_FD, &cryp);
 	if (res) {
@@ -603,40 +582,25 @@ RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len, bool is_
 		return res;
 	}
 
-	if (is_last)
-		result->len = rk_get_hash_len(hash_cfg->algo);
-
 	return RK_CRYPTO_SUCCESS;
 }
 
-RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_len, bool is_last)
+RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_len)
 {
 	struct crypt_op cryp;
-	struct sess_id_node *node;
-	rk_hash_config *hash_cfg;
-	struct hash_result *result;
 	RK_RES res;
 
 	CHECK_CRYPTO_INITED();
 
 	RK_CRYPTO_CHECK_PARAM(!data || data_len == 0);
 
-	node = rk_get_sess_node(handle);
-	if (!node) {
-		E_TRACE("handle[%u] rk_get_sess_node  error!\n", handle);
-		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
-	}
-
-	result = node->priv;
-	hash_cfg = &node->config.hash;
-
 	memset(&cryp, 0, sizeof(cryp));
 
 	cryp.ses   = handle;
 	cryp.len   = data_len;
 	cryp.src   = (void *)data;
-	cryp.mac   = result->hash;
-	cryp.flags = is_last ? COP_FLAG_FINAL : COP_FLAG_UPDATE;
+	cryp.mac   = NULL;
+	cryp.flags = COP_FLAG_UPDATE;
 
 	res = xioctl(cryptodev_fd, CIOCCRYPT, &cryp);
 	if (res) {
@@ -644,46 +608,51 @@ RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_
 		return res;
 	}
 
-	if (is_last)
-		result->len = rk_get_hash_len(hash_cfg->algo);
-
 	return RK_CRYPTO_SUCCESS;
 }
 
 RK_RES rk_hash_final(rk_handle handle, uint8_t *hash, uint32_t *hash_len)
 {
 	RK_RES res = RK_CRYPTO_SUCCESS;
-	struct sess_id_node *node;
-	struct hash_result *result;
+	struct crypt_op cryp;
+	rk_hash_config *hash_cfg;
+	uint8_t hash_tmp[SHA512_HASH_SIZE];
+	uint32_t hash_tmp_len;
 
 	CHECK_CRYPTO_INITED();
 
-	node = rk_get_sess_node(handle);
-	if (!node) {
-		E_TRACE("handle[%u] rk_get_sess_node  error!\n", handle);
-		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
+	hash_cfg = rk_get_sess_config(handle);
+	if (!hash_cfg) {
+		E_TRACE("handle[%u] rk_get_sess_config  error!\n", handle);
+		return RK_CRYPTO_ERR_STATE;
 	}
 
-	result = node->priv;
+	hash_tmp_len = rk_get_hash_len(hash_cfg->algo);
+
+	/* final update 0 Byte */
+	memset(&cryp, 0, sizeof(cryp));
+
+	cryp.ses   = handle;
+	cryp.mac   = hash_tmp;
+	cryp.flags = COP_FLAG_FINAL;
+
+	res = xioctl(cryptodev_fd, CIOCCRYPT, &cryp);
+	if (res) {
+		E_TRACE("CIOCCRYPT error!\n");
+		goto exit;
+	}
 
 	if (hash) {
-		if (result->len == 0) {
-			res = RK_CRYPTO_ERR_GENERIC;
-			goto exit;
-		}
-
-		memcpy(hash, result->hash, result->len);
+		memcpy(hash, hash_tmp, hash_tmp_len);
 
 		if (hash_len)
-			*hash_len = result->len;
+			*hash_len = hash_tmp_len;
 	}
+
 exit:
 	res = xioctl(cryptodev_fd, CIOCFSESSION, &handle);
 	if (res)
 		E_TRACE("CIOCFSESSION error!");
-
-	if (node->priv)
-		free(node->priv);
 
 	rk_del_sess_node(handle);
 
