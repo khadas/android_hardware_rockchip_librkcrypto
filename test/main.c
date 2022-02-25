@@ -12,6 +12,7 @@
 #include "test_hash.h"
 #include "test_random.h"
 #include "test_stress.h"
+#include "test_multi.h"
 
 enum {
 	OPTION_TOP = 0,
@@ -25,6 +26,7 @@ enum {
 	RANDOM,
 	THROUGHPUT,
 	STRESS,
+	MULTI,
 	OPTION_BUTT,
 };
 
@@ -63,6 +65,7 @@ int main(int argc, char *argv[])
 		{"random",	0,	NULL,	RANDOM},
 		{"throughput",	0,	NULL,	THROUGHPUT},
 		{"stress",	1,	NULL,	STRESS},
+		{"multi",	0,	NULL,	MULTI},
 		{NULL,		0,	NULL,	0},
 	};
 
@@ -106,6 +109,9 @@ int main(int argc, char *argv[])
 		case STRESS:
 			stress_cnt = atoi(optarg);
 			stress_test(stress_cnt);
+			break;
+		case MULTI:
+			test_multi();
 			break;
 		case '?':
 			guide();
