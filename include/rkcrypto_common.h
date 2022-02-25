@@ -34,6 +34,7 @@ typedef uint32_t rk_handle;
 #define RK_CRYPTO_ERR_ACCESS_DENIED	0xF0000005
 #define RK_CRYPTO_ERR_BUSY		0xF0000006
 #define RK_CRYPTO_ERR_TIMEOUT		0xF0000007
+#define RK_CRYPTO_ERR_UNINITED		0xF0000008
 
 /* Algorithm operation */
 #define RK_OP_CIPHER_ENC		1

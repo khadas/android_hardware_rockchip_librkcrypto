@@ -65,7 +65,12 @@ static int cryptodev_refcnt;
 static struct list_head sess_id_list;
 pthread_mutex_t sess_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-#define IS_CRYPTO_INVALID()	(cryptodev_fd < 0)
+#define CHECK_CRYPTO_INITED()	do {\
+					if (cryptodev_fd < 0) {\
+						E_TRACE("RK_CRYPTO is uninitialized\n");\
+						return RK_CRYPTO_ERR_UNINITED;\
+					}\
+				} while (0)
 
 static const struct {
 	const uint32_t kernel_code;
@@ -377,8 +382,9 @@ RK_RES rk_cipher_init(const rk_cipher_config *config, rk_handle *handle)
 	struct session_op sess;
 	uint32_t crypto_id = 0;
 
-	if (!config || !handle)
-		return RK_CRYPTO_ERR_PARAMETER;
+	CHECK_CRYPTO_INITED();
+
+	RK_CRYPTO_CHECK_PARAM(!config || !handle);
 
 	memset(&sess, 0, sizeof(sess));
 
@@ -413,8 +419,9 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 	rk_cipher_config *cipher_cfg;
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 
-	if (IS_CRYPTO_INVALID())
-		return RK_CRYPTO_ERR_PARAMETER;
+	CHECK_CRYPTO_INITED();
+
+	RK_CRYPTO_CHECK_PARAM(in_len == 0);
 
 	cipher_cfg = rk_get_sess_config(handle);
 	if (!cipher_cfg) {
@@ -445,7 +452,8 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 		goto exit;
 	}
 
-	*out_len = in_len;
+	if (out_len)
+		*out_len = in_len;
 
 exit:
 	return res;
@@ -458,8 +466,9 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 	rk_cipher_config *cipher_cfg;
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 
-	if (IS_CRYPTO_INVALID())
-		return RK_CRYPTO_ERR_PARAMETER;
+	CHECK_CRYPTO_INITED();
+
+	RK_CRYPTO_CHECK_PARAM(!in || !out || in_len == 0);
 
 	cipher_cfg = rk_get_sess_config(handle);
 	if (!cipher_cfg) {
@@ -490,7 +499,8 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 		goto exit;
 	}
 
-	*out_len = in_len;
+	if (out_len)
+		*out_len = in_len;
 
 exit:
 	return res;
@@ -500,8 +510,7 @@ RK_RES rk_cipher_final(rk_handle handle)
 {
 	RK_RES res;
 
-	if (IS_CRYPTO_INVALID())
-		return RK_CRYPTO_ERR_PARAMETER;
+	CHECK_CRYPTO_INITED();
 
 	res = xioctl(cryptodev_fd, CIOCFSESSION, &handle);
 	if (res) {
@@ -519,11 +528,9 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 	uint32_t crypto_id = 0;
 	struct hash_result *result = NULL;
 
-	if (IS_CRYPTO_INVALID())
-		return RK_CRYPTO_ERR_PARAMETER;
+	CHECK_CRYPTO_INITED();
 
-	if (!config || !handle)
-		return RK_CRYPTO_ERR_PARAMETER;
+	RK_CRYPTO_CHECK_PARAM(!config || !handle);
 
 	result = malloc(sizeof(*result));
 	if (!result) {
@@ -569,8 +576,9 @@ RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len, bool is_
 	struct hash_result *result;
 	RK_RES res;
 
-	if (IS_CRYPTO_INVALID())
-		return RK_CRYPTO_ERR_PARAMETER;
+	CHECK_CRYPTO_INITED();
+
+	RK_CRYPTO_CHECK_PARAM(data_len == 0);
 
 	node = rk_get_sess_node(handle);
 	if (!node) {
@@ -609,8 +617,9 @@ RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_
 	struct hash_result *result;
 	RK_RES res;
 
-	if (IS_CRYPTO_INVALID())
-		return RK_CRYPTO_ERR_PARAMETER;
+	CHECK_CRYPTO_INITED();
+
+	RK_CRYPTO_CHECK_PARAM(!data || data_len == 0);
 
 	node = rk_get_sess_node(handle);
 	if (!node) {
@@ -647,8 +656,7 @@ RK_RES rk_hash_final(rk_handle handle, uint8_t *hash, uint32_t *hash_len)
 	struct sess_id_node *node;
 	struct hash_result *result;
 
-	if (IS_CRYPTO_INVALID())
-		return RK_CRYPTO_ERR_PARAMETER;
+	CHECK_CRYPTO_INITED();
 
 	node = rk_get_sess_node(handle);
 	if (!node) {
@@ -685,6 +693,8 @@ exit:
 RK_RES rk_crypto_fd_ioctl(uint32_t request, struct crypt_fd_map_op *mop)
 {
 	RK_RES res;
+
+	CHECK_CRYPTO_INITED();
 
 	RK_CRYPTO_CHECK_PARAM(request != RIOCCRYPT_FD_MAP &&
 			   request != RIOCCRYPT_FD_UNMAP);
