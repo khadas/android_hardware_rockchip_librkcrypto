@@ -20,6 +20,6 @@ RK_RES rk_cipher_final(rk_handle handle);
 RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle);
 RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len);
 RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_len);
-RK_RES rk_hash_final(rk_handle handle, uint8_t *hash, uint32_t *hash_len);
+RK_RES rk_hash_final(rk_handle handle, uint8_t *hash);
 
 #endif

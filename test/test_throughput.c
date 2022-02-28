@@ -458,7 +458,7 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 {
 	int res = 0;
 	uint32_t data_block = data_len;
-	uint32_t out_len, tmp_len;
+	uint32_t tmp_len;
 	uint8_t hash[64];
 	uint8_t key[MAX_HASH_BLOCK_SIZE];
 	uint8_t *tmp_data;
@@ -501,10 +501,11 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 	while (total_nsec < nsec) {
 		clock_gettime(CLOCK_REALTIME, &start);
 
+		data_block = data_len;
+
 		if (is_virt) {
 			tmp_len    = data_len;
 			tmp_data   = input;
-			data_block = data_len;
 
 			while (tmp_len) {
 				data_block = tmp_len > data_block ? data_block : tmp_len;
@@ -533,7 +534,7 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 		rounds ++;
 	}
 
-	res = rk_hash_final(hash_hdl, hash, &out_len);
+	res = rk_hash_final(hash_hdl, hash);
 	if (res) {
 		printf("rk_hash_final error = %d\n", res);
 		return -1;
@@ -548,7 +549,7 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 
 	return res;
 error:
-	rk_hash_final(hash_hdl, NULL, NULL);
+	rk_hash_final(hash_hdl, NULL);
 	return res;
 }
 

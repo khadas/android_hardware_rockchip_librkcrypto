@@ -105,7 +105,7 @@ static RK_RES test_nosupport_multi(void)
 		goto error;
 	}
 
-	rk_hash_final(hdl_hash2, NULL, NULL);
+	rk_hash_final(hdl_hash2, NULL);
 
 	rk_crypto_deinit();
 

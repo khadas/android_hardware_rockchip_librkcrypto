@@ -611,7 +611,7 @@ RK_RES rk_hash_update_virt(rk_handle handle, const uint8_t *data, uint32_t data_
 	return RK_CRYPTO_SUCCESS;
 }
 
-RK_RES rk_hash_final(rk_handle handle, uint8_t *hash, uint32_t *hash_len)
+RK_RES rk_hash_final(rk_handle handle, uint8_t *hash)
 {
 	RK_RES res = RK_CRYPTO_SUCCESS;
 	struct crypt_op cryp;
@@ -642,12 +642,8 @@ RK_RES rk_hash_final(rk_handle handle, uint8_t *hash, uint32_t *hash_len)
 		goto exit;
 	}
 
-	if (hash) {
+	if (hash)
 		memcpy(hash, hash_tmp, hash_tmp_len);
-
-		if (hash_len)
-			*hash_len = hash_tmp_len;
-	}
 
 exit:
 	res = xioctl(cryptodev_fd, CIOCFSESSION, &handle);

@@ -100,7 +100,7 @@ static RK_RES test_hash_item_virt(const struct test_hash_item *item,
 		tmp_data += data_block;
 	}
 
-	rk_hash_final(hash_hdl, hash_hard, &out_len);
+	rk_hash_final(hash_hdl, hash_hard);
 
 	if (is_hmac)
 		res = soft_hmac(algo, key, key_len, buffer, buffer_len, hash_soft, &out_len);
@@ -181,7 +181,7 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 		goto exit;
 	}
 
-	rk_hash_final(hash_hdl, hash_hard, &out_len);
+	rk_hash_final(hash_hdl, hash_hard);
 
 	if (is_hmac)
 		res = soft_hmac(algo, key, key_len, buffer->vaddr, buffer->size,
@@ -211,7 +211,7 @@ static RK_RES test_hash_item_fd(const struct test_hash_item *item,
 	res = RK_CRYPTO_SUCCESS;
 exit:
 	if (res) {
-		rk_hash_final(hash_hdl, NULL, NULL);
+		rk_hash_final(hash_hdl, NULL);
 		printf("dma_fd:\t[%12s]\tFAIL\n", test_algo_name(algo));
 	}
 
