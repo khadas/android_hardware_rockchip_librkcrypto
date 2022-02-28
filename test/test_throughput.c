@@ -227,7 +227,6 @@ static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 	uint32_t res = 0;
 	rk_handle handle = 0;
 	rk_cipher_config config;
-	uint32_t out_len;
 	struct timespec start, end;
 	uint64_t total_nsec, nsec;
 	uint32_t rounds;
@@ -268,11 +267,12 @@ static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 		}
 
 		if (is_virt)
-			res = rk_cipher_crypt_virt(handle, in_out, data_len, in_out, &out_len);
+			res = rk_cipher_crypt_virt(handle, in_out, in_out, data_len);
 		else
 			res = rk_cipher_crypt(handle,
-					      ((rk_crypto_mem *)in_out)->dma_fd, data_len,
-					      ((rk_crypto_mem *)in_out)->dma_fd, &out_len);
+					      ((rk_crypto_mem *)in_out)->dma_fd,
+					      ((rk_crypto_mem *)in_out)->dma_fd,
+					      data_len);
 
 		if (res) {
 			printf("test rk_cipher_crypt failed! 0x%08x\n", res);

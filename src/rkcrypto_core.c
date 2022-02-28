@@ -412,8 +412,7 @@ exit:
 	return res;
 }
 
-RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
-		       int out_fd, uint32_t *out_len)
+RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, int out_fd, uint32_t len)
 {
 	struct crypt_fd_op cryp;
 	rk_cipher_config *cipher_cfg;
@@ -421,7 +420,7 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 
 	CHECK_CRYPTO_INITED();
 
-	RK_CRYPTO_CHECK_PARAM(in_len == 0);
+	RK_CRYPTO_CHECK_PARAM(len == 0);
 
 	cipher_cfg = rk_get_sess_config(handle);
 	if (!cipher_cfg) {
@@ -433,7 +432,7 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 
 	/* Encrypt data.in to data.encrypted */
 	cryp.ses    = handle;
-	cryp.len    = in_len;
+	cryp.len    = len;
 	cryp.src_fd = in_fd;
 	cryp.dst_fd = out_fd;
 	cryp.iv     = (void *)cipher_cfg->iv;
@@ -452,15 +451,11 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, uint32_t in_len,
 		goto exit;
 	}
 
-	if (out_len)
-		*out_len = in_len;
-
 exit:
 	return res;
 }
 
-RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len,
-			    uint8_t *out, uint32_t *out_len)
+RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint8_t *out, uint32_t len)
 {
 	struct crypt_op cryp;
 	rk_cipher_config *cipher_cfg;
@@ -468,7 +463,7 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 
 	CHECK_CRYPTO_INITED();
 
-	RK_CRYPTO_CHECK_PARAM(!in || !out || in_len == 0);
+	RK_CRYPTO_CHECK_PARAM(!in || !out || len == 0);
 
 	cipher_cfg = rk_get_sess_config(handle);
 	if (!cipher_cfg) {
@@ -480,7 +475,7 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 
 	/* Encrypt data.in to data.encrypted */
 	cryp.ses   = handle;
-	cryp.len   = in_len;
+	cryp.len   = len;
 	cryp.src   = (void *)in;
 	cryp.dst   = out;
 	cryp.iv    = (void *)cipher_cfg->iv;
@@ -498,9 +493,6 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint32_t in_len
 		E_TRACE("rk_update_user_iv error!\n");
 		goto exit;
 	}
-
-	if (out_len)
-		*out_len = in_len;
 
 exit:
 	return res;

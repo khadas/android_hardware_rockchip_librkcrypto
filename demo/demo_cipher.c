@@ -32,7 +32,6 @@ RK_RES demo_cipher(void)
 	rk_cipher_config config;
 	uint32_t key_len = sizeof(key_0);
 	uint32_t data_len = sizeof(input);
-	uint32_t out_len;
 	rk_handle handle = 0;
 	rk_crypto_mem *in = NULL;
 	rk_crypto_mem *out = NULL;
@@ -72,7 +71,7 @@ RK_RES demo_cipher(void)
 		goto exit;
 	}
 
-	res = rk_cipher_crypt(handle, in->dma_fd, data_len, out->dma_fd, &out_len);
+	res = rk_cipher_crypt(handle, in->dma_fd, out->dma_fd, data_len);
 	if (res) {
 		printf("rk_cipher_crypt error[%x]\n", res);
 		goto exit;
@@ -80,7 +79,7 @@ RK_RES demo_cipher(void)
 
 	rk_cipher_final(handle);
 
-	if (memcmp(out->vaddr, expected_enc, out_len)) {
+	if (memcmp(out->vaddr, expected_enc, data_len)) {
 		printf("ENC result not equal to expected value, error!\n");
 		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
@@ -97,7 +96,7 @@ RK_RES demo_cipher(void)
 		goto exit;
 	}
 
-	res = rk_cipher_crypt(handle, out->dma_fd, out_len, out->dma_fd, &out_len);
+	res = rk_cipher_crypt(handle, out->dma_fd, out->dma_fd, data_len);
 	if (res) {
 		printf("rk_cipher_crypt error[%x]\n", res);
 		goto exit;
@@ -129,7 +128,6 @@ RK_RES demo_cipher_virt(void)
 	uint32_t key_len = sizeof(key_0);
 	uint8_t output[16];
 	uint32_t data_len = sizeof(input);
-	uint32_t out_len;
 	rk_handle handle = 0;
 
 	res = rk_crypto_init();
@@ -153,7 +151,7 @@ RK_RES demo_cipher_virt(void)
 		goto exit;
 	}
 
-	res = rk_cipher_crypt_virt(handle, input, data_len, output, &out_len);
+	res = rk_cipher_crypt_virt(handle, input, output, data_len);
 	if (res) {
 		printf("rk_cipher_crypt_virt error[%x]\n", res);
 		goto exit;
@@ -161,7 +159,7 @@ RK_RES demo_cipher_virt(void)
 
 	rk_cipher_final(handle);
 
-	if (memcmp(output, expected_enc, out_len)) {
+	if (memcmp(output, expected_enc, data_len)) {
 		printf("ENC result not equal to expected value, error!\n");
 		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
@@ -178,7 +176,7 @@ RK_RES demo_cipher_virt(void)
 		goto exit;
 	}
 
-	res = rk_cipher_crypt_virt(handle, output, out_len, output, &out_len);
+	res = rk_cipher_crypt_virt(handle, output, output, data_len);
 	if (res) {
 		printf("rk_cipher_crypt_virt error[%x]\n", res);
 		goto exit;

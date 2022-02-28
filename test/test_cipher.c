@@ -89,7 +89,7 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item, int ver
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t i, j, k;
 	uint32_t ops[] = {RK_OP_CIPHER_ENC, RK_OP_CIPHER_DEC};
-	uint32_t data_len = TEST_DATA_MAX, out_len;
+	uint32_t data_len = TEST_DATA_MAX;
 	rk_handle cipher_hdl = 0;
 	rk_cipher_config cipher_cfg;
 	uint8_t *plain = NULL, *cipher_soft = NULL, *cipher_hard = NULL;
@@ -179,8 +179,8 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item, int ver
 
 					tmp_len = loop_nbytes > MULTI_BLOCKSIZE ? MULTI_BLOCKSIZE : loop_nbytes;
 
-					res = rk_cipher_crypt_virt(cipher_hdl, tmp_data_in, tmp_len,
-								   tmp_data_out, &out_len);
+					res = rk_cipher_crypt_virt(cipher_hdl, tmp_data_in,
+								   tmp_data_out, tmp_len);
 					if (res) {
 						E_TRACE("rk_cipher_crypt_virt error[%x]\n", res);
 						goto exit;
@@ -242,7 +242,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item, int verbo
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t i, j, k;
 	uint32_t ops[] = {RK_OP_CIPHER_ENC, RK_OP_CIPHER_DEC};
-	uint32_t data_len = TEST_DATA_MAX, out_len;
+	uint32_t data_len = TEST_DATA_MAX;
 	rk_handle cipher_hdl = 0;
 	rk_cipher_config cipher_cfg;
 	rk_crypto_mem *plain = NULL, *cipher_soft = NULL, *cipher_hard = NULL;
@@ -319,8 +319,8 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item, int verbo
 				else
 					data_len = TEST_DATA_MAX;
 
-				res = rk_cipher_crypt(cipher_hdl, plain->dma_fd, data_len,
-						      cipher_hard->dma_fd, &out_len);
+				res = rk_cipher_crypt(cipher_hdl, plain->dma_fd,
+						      cipher_hard->dma_fd, data_len);
 				if (res) {
 					E_TRACE("rk_cipher_crypt error[%x]\n", res);
 					goto exit;
