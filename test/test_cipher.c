@@ -182,6 +182,7 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item, int ver
 					res = rk_cipher_crypt_virt(cipher_hdl, tmp_data_in,
 								   tmp_data_out, tmp_len);
 					if (res) {
+						rk_cipher_final(cipher_hdl);
 						E_TRACE("rk_cipher_crypt_virt error[%x]\n", res);
 						goto exit;
 					}
@@ -190,6 +191,9 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item, int ver
 					tmp_data_out += tmp_len;
 					loop_nbytes  -= tmp_len;
 				}
+
+				rk_cipher_final(cipher_hdl);
+				cipher_hdl = 0;
 
 				res = soft_cipher(algo, mode, operation,
 						  cipher_cfg.key, cipher_cfg.key_len, iv_tmp,
@@ -208,8 +212,6 @@ static RK_RES test_cipher_item_virt(const struct test_cipher_item *item, int ver
 					goto exit;
 				}
 
-				rk_cipher_final(cipher_hdl);
-				cipher_hdl = 0;
 				if (verbose)
 					printf("virt:\t[%s-%u]\t%s\t%s\tPASS\n",
 					       test_algo_name(algo), key_len * 8,
@@ -322,9 +324,13 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item, int verbo
 				res = rk_cipher_crypt(cipher_hdl, plain->dma_fd,
 						      cipher_hard->dma_fd, data_len);
 				if (res) {
+					rk_cipher_final(cipher_hdl);
 					E_TRACE("rk_cipher_crypt error[%x]\n", res);
 					goto exit;
 				}
+
+				rk_cipher_final(cipher_hdl);
+				cipher_hdl = 0;
 
 				res = soft_cipher(algo, mode, operation,
 						  cipher_cfg.key, cipher_cfg.key_len, iv_tmp,
@@ -343,8 +349,6 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item, int verbo
 					goto exit;
 				}
 
-				rk_cipher_final(cipher_hdl);
-				cipher_hdl = 0;
 				if (verbose)
 					printf("dma_fd:\t[%s-%u]\t%s\t%s\tPASS\n",
 					       test_algo_name(algo), key_len * 8,

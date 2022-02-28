@@ -150,21 +150,6 @@ const struct algo_map_info algo_map_tbl[] = {
 	{RK_ALGO_CBCMAC_AES,  0, CRYPTO_RK_AES_CBC_MAC},
 };
 
-static uint32_t rk_get_config_type(uint32_t algo, uint32_t mode)
-{
-	if (algo > RK_ALGO_CIPHER_TOP && algo < RK_ALGO_CIPHER_BUTT) {
-		if (mode == RK_CIPHER_MODE_CCM || mode == RK_CIPHER_MODE_GCM)
-			return RK_CONFIG_TYPE_AE;
-
-		return RK_CONFIG_TYPE_CIPHER;
-	}
-
-	if (algo > RK_ALGO_HASH_TOP && algo < RK_ALGO_HASH_BUTT)
-		return RK_CONFIG_TYPE_HASH;
-
-	return RK_CONFIG_TYPE_CIPHER;
-}
-
 static uint32_t rk_get_hash_len(uint32_t algo)
 {
 	switch (algo) {
@@ -302,6 +287,43 @@ exit:
 	return res;
 }
 
+static RK_RES rk_create_session(struct session_op *sess, uint32_t config_type,
+				const void *config, void *priv, rk_handle *handle)
+{
+	RK_RES res;
+
+	res = xioctl(cryptodev_fd, CIOCGSESSION, sess);
+	if (res) {
+		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED)
+			E_TRACE("CIOCGSESSION error %d!\n", errno);
+
+		goto exit;
+	}
+
+	res = rk_add_sess_node(sess->ses, config_type, config, priv);
+	if (res) {
+		E_TRACE("rk_add_sess_node error[%x]!\n", res);
+		xioctl(cryptodev_fd, CIOCFSESSION, &sess->ses);
+	} else {
+		*handle = sess->ses;
+	}
+exit:
+	return res;
+}
+
+static RK_RES rk_destroy_session(rk_handle handle)
+{
+	RK_RES res;
+
+	res = xioctl(cryptodev_fd, CIOCFSESSION, &handle);
+	if (res) {
+		E_TRACE("CIOCFSESSION error!");
+		return res;
+	}
+
+	return rk_del_sess_node(handle);
+}
+
 static RK_RES rk_update_user_iv(const rk_cipher_config *cfg)
 {
 	struct sess_id_node *node;
@@ -391,25 +413,15 @@ RK_RES rk_cipher_init(const rk_cipher_config *config, rk_handle *handle)
 	res = rk_get_crypto_id(config->algo, config->mode, &crypto_id);
 	if (res) {
 		E_TRACE("rk_get_crypto_id error!\n");
-		goto exit;
+		return res;
 	}
 
 	sess.cipher = crypto_id;
 	sess.key    = (__u8 *)config->key;
 	sess.keylen = config->key_len;
 
-	res = xioctl(cryptodev_fd, CIOCGSESSION, &sess);
-	if (res) {
-		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED)
-			E_TRACE("CIOCGSESSION error %d!\n", errno);
-		goto exit;
-	}
-
-	res = rk_add_sess_node(sess.ses, rk_get_config_type(config->algo, config->mode), config, (void *)config->iv);
-	if (res == RK_CRYPTO_SUCCESS)
-		*handle = sess.ses;
-exit:
-	return res;
+	return rk_create_session(&sess, RK_CONFIG_TYPE_CIPHER,
+				 config, (void *)config->iv, handle);
 }
 
 RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, int out_fd, uint32_t len)
@@ -500,17 +512,9 @@ exit:
 
 RK_RES rk_cipher_final(rk_handle handle)
 {
-	RK_RES res;
-
 	CHECK_CRYPTO_INITED();
 
-	res = xioctl(cryptodev_fd, CIOCFSESSION, &handle);
-	if (res) {
-		E_TRACE("CIOCFSESSION error!");
-		return res;
-	}
-
-	return rk_del_sess_node(handle);
+	return rk_destroy_session(handle);
 }
 
 RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
@@ -528,7 +532,7 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 	res = rk_get_crypto_id(config->algo, 0, &crypto_id);
 	if (res) {
 		E_TRACE("rk_get_crypto_id error!\n");
-		goto exit;
+		return res;
 	}
 
 	sess.mac = crypto_id;
@@ -537,18 +541,7 @@ RK_RES rk_hash_init(const rk_hash_config *config, rk_handle *handle)
 		sess.mackeylen = config->key_len;
 	}
 
-	res = xioctl(cryptodev_fd, CIOCGSESSION, &sess);
-	if (res) {
-		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED)
-			E_TRACE("CIOCGSESSION error %d!\n", errno);
-		goto exit;
-	}
-
-	rk_add_sess_node(sess.ses, rk_get_config_type(config->algo, 0), config, NULL);
-
-	*handle = sess.ses;
-exit:
-	return res;
+	return rk_create_session(&sess, RK_CONFIG_TYPE_HASH, config, NULL, handle);
 }
 
 RK_RES rk_hash_update(rk_handle handle, int data_fd, uint32_t data_len)
@@ -616,7 +609,7 @@ RK_RES rk_hash_final(rk_handle handle, uint8_t *hash)
 	hash_cfg = rk_get_sess_config(handle);
 	if (!hash_cfg) {
 		E_TRACE("handle[%u] rk_get_sess_config  error!\n", handle);
-		return RK_CRYPTO_ERR_STATE;
+		goto exit;
 	}
 
 	hash_tmp_len = rk_get_hash_len(hash_cfg->algo);
@@ -638,13 +631,7 @@ RK_RES rk_hash_final(rk_handle handle, uint8_t *hash)
 		memcpy(hash, hash_tmp, hash_tmp_len);
 
 exit:
-	res = xioctl(cryptodev_fd, CIOCFSESSION, &handle);
-	if (res)
-		E_TRACE("CIOCFSESSION error!");
-
-	rk_del_sess_node(handle);
-
-	return res;
+	return rk_destroy_session(handle);
 }
 
 RK_RES rk_crypto_fd_ioctl(uint32_t request, struct crypt_fd_map_op *mop)

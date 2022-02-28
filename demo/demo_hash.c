@@ -72,6 +72,7 @@ RK_RES demo_hash(void)
 
 	res = rk_hash_update(hash_hdl, in->dma_fd, in->size);
 	if (res) {
+		rk_hash_final(hash_hdl, NULL);
 		printf("rk_hash_update error = %d\n", res);
 		goto exit;
 	}
@@ -128,6 +129,7 @@ RK_RES demo_hash_virt(void)
 		if (tmp_len > data_block) {
 			res = rk_hash_update_virt(hash_hdl, tmp_data, data_block);
 			if (res) {
+				rk_hash_final(hash_hdl, NULL);
 				printf("rk_hash_update_virt error! res: 0x%08x\n", res);
 				goto exit;
 			}
@@ -135,6 +137,7 @@ RK_RES demo_hash_virt(void)
 			data_block = tmp_len;
 			res = rk_hash_update_virt(hash_hdl, tmp_data, tmp_len);
 			if (res) {
+				rk_hash_final(hash_hdl, NULL);
 				printf("rk_hash_update_virt error! res: 0x%08x\n", res);
 				goto exit;
 			}
@@ -194,6 +197,7 @@ RK_RES demo_hmac(void)
 
 	res = rk_hash_update(hash_hdl, in->dma_fd, in->size);
 	if (res) {
+		rk_hash_final(hash_hdl, NULL);
 		printf("rk_hash_update error = %d\n", res);
 		goto exit;
 	}
@@ -253,6 +257,7 @@ RK_RES demo_hmac_virt(void)
 
 		res = rk_hash_update_virt(hash_hdl, tmp_data, data_block);
 		if (res) {
+			rk_hash_final(hash_hdl, NULL);
 			printf("rk_hash_update_virt error! res: 0x%08x\n", res);
 			goto exit;
 		}

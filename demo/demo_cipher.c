@@ -73,6 +73,7 @@ RK_RES demo_cipher(void)
 
 	res = rk_cipher_crypt(handle, in->dma_fd, out->dma_fd, data_len);
 	if (res) {
+		rk_cipher_final(handle);
 		printf("rk_cipher_crypt error[%x]\n", res);
 		goto exit;
 	}
@@ -98,6 +99,7 @@ RK_RES demo_cipher(void)
 
 	res = rk_cipher_crypt(handle, out->dma_fd, out->dma_fd, data_len);
 	if (res) {
+		rk_cipher_final(handle);
 		printf("rk_cipher_crypt error[%x]\n", res);
 		goto exit;
 	}
@@ -153,6 +155,7 @@ RK_RES demo_cipher_virt(void)
 
 	res = rk_cipher_crypt_virt(handle, input, output, data_len);
 	if (res) {
+		rk_cipher_final(handle);
 		printf("rk_cipher_crypt_virt error[%x]\n", res);
 		goto exit;
 	}
@@ -178,6 +181,7 @@ RK_RES demo_cipher_virt(void)
 
 	res = rk_cipher_crypt_virt(handle, output, output, data_len);
 	if (res) {
+		rk_cipher_final(handle);
 		printf("rk_cipher_crypt_virt error[%x]\n", res);
 		goto exit;
 	}

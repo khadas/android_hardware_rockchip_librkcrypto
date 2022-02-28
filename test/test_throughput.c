@@ -275,6 +275,7 @@ static int test_cipher_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
 					      data_len);
 
 		if (res) {
+			rk_cipher_final(handle);
 			printf("test rk_cipher_crypt failed! 0x%08x\n", res);
 			goto error;
 		}
@@ -512,6 +513,7 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 
 				res = rk_hash_update_virt(hash_hdl, tmp_data, data_block);
 				if (res) {
+					rk_hash_final(hash_hdl, NULL);
 					printf("rk_hash_update_virt[%lu/%u] error = %d\n",
 					       (unsigned long)(tmp_data - (uint8_t *)input), tmp_len, res);
 					goto error;
@@ -523,6 +525,7 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 		} else {
 			res = rk_hash_update(hash_hdl, ((rk_crypto_mem *)input)->dma_fd, data_block);
 			if (res) {
+				rk_hash_final(hash_hdl, NULL);
 				printf("rk_hash_update error = %d\n", res);
 				goto error;
 			}
@@ -549,7 +552,6 @@ static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 
 	return res;
 error:
-	rk_hash_final(hash_hdl, NULL);
 	return res;
 }
 
