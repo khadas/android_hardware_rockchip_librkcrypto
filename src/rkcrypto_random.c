@@ -13,7 +13,7 @@
 #define HWRNG_NODE	"/dev/hwrng"
 #endif
 
-RK_RES rk_get_random(uint32_t len, uint8_t *data)
+RK_RES rk_get_random(uint8_t *data, uint32_t len)
 {
 	RK_RES res = RK_CRYPTO_SUCCESS;
 	int hwrng_fd = -1;

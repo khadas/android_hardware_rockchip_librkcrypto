@@ -8,6 +8,6 @@
 #include <stdint.h>
 #include "rkcrypto_common.h"
 
-RK_RES rk_get_random(uint32_t len, uint8_t *data);
+RK_RES rk_get_random(uint8_t *data, uint32_t len);
 
 #endif

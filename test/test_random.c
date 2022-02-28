@@ -21,7 +21,7 @@ RK_RES test_random(void)
 	uint8_t data[RAND_MAX_LEN];
 
 	for (len = 8; len <= RAND_MAX_LEN; len *= 2) {
-		if (rk_get_random(len, data))
+		if (rk_get_random(data, len))
 			goto error;
 
 		hw = 0;
