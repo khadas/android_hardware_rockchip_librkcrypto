@@ -89,6 +89,7 @@ RK_RES demo_cipher(void)
 	printf("Test CIPHER ENC success!\n");
 
 	config.operation = RK_OP_CIPHER_DEC;
+	memcpy(config.iv, iv, sizeof(iv));
 
 	res = rk_cipher_init(&config, &handle);
 	if (res) {
@@ -169,6 +170,7 @@ RK_RES demo_cipher_virt(void)
 	printf("Test CIPHER_VIRT ENC success!\n");
 
 	config.operation = RK_OP_CIPHER_DEC;
+	memcpy(config.iv, iv, sizeof(iv));
 
 	res = rk_cipher_init(&config, &handle);
 	if (res) {
