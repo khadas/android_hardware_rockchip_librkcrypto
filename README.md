@@ -110,3 +110,30 @@ $ make clean # 清除目标文件
 - **应用开发说明文档**
 
   `Rockchip_Developer_Guide_CRYPTO_CN`
+
+## FAQ
+
+- **编译链依赖**
+
+  CMake中默认编译链为gcc 10.3版本，即`gcc-arm-10.3-2021.07-x86_64-arm-none-linux-gnueabihf`和`gcc-arm-10.3-2021.07-x86_64-aarch64-none-linux-gnu`。
+
+  若没有该编译链版本，编译时会报类似如下错误：
+
+  ```makefile
+  make[2]: librkcrypto/../../prebuilts/gcc/linux-x86/arm/gcc-arm-10.3-2021.07-x86_64-arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-gcc: Command not found
+  ```
+
+  可以修改CMakeLists.txt中的编译链路径和版本：
+
+  ```makefile
+  set (TOOLCHAIN_PREBUILTS "${CMAKE_CURRENT_SOURCE_DIR}/../../prebuilts")
+  set (TOOLCHAIN_PATH_ARM32 "gcc/linux-x86/arm/gcc-arm-10.3-2021.07-x86_64-arm-none-linux-gnueabihf/bin")
+  set (TOOLCHAIN_PATH_AARCH64 "gcc/linux-x86/aarch64/gcc-arm-10.3-2021.07-x86_64-aarch64-none-linux-gnu/bin")
+  ```
+
+  若运行时出现如下报错，则是编译链GLIBC版本与设备上GLIBC版本不一致，请修改编译链版本或者修改设备GLIBC版本。
+
+  ```shell
+  version 'GLIBC_2.29' not found (required by /lib/librkcrypto.so)
+  ```
+
