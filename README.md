@@ -2,7 +2,7 @@
 
 librkcrypto提供基于硬件的算法接口，支持使用DMA的方式对数据进行计算，可用于各种加解密、认证等场景。
 
-librkcrypto依赖于kernel crypto驱动实现，驱动开发和应用API开发请参考文档`Rockchip_Developer_Guide_CRYPTO_CN`。
+librkcrypto依赖于kernel crypto驱动实现，驱动开发和应用API开发请参考文档`Rockchip_Developer_Guide_Crypto_HWRNG_CN.pdf`。
 
 ## 版本号查询
 
@@ -13,7 +13,7 @@ librkcrypto依赖于kernel crypto驱动实现，驱动开发和应用API开发�
 ```bash
 # 以linux平台64位为例
 $ strings /lib64/librkcrypto.so |grep api |grep version
-rkcrypto api version 1.0.0
+rkcrypto api version 1.1.0
 ```
 
 - **日志打印**
@@ -21,16 +21,50 @@ rkcrypto api version 1.0.0
 当每个进程首次调用librkcrypto时，会打印版本号
 
 ```bash
-RKCRYPTO I[rk_crypto_init, 262]: rkcrypto api version 1.0.0
+RKCRYPTO I[rk_crypto_init, 262]: rkcrypto api version 1.1.0
 ```
 
 ## 适用芯片平台
 
-RK3588
+RK3588 | RK356x | RV1109 | RV1126
 
-部分API适用以下芯片平台（详见应用开发说明文档）：
+部分API不适用于部分芯片平台，详见应用开发说明文档。
 
-RK3566 | RK3568 | RV1109 | RV1126
+## 版本依赖
+
+### V1.1.0
+
+kernel-4.19 需更新至以下提交：
+
+```shell
+1e549d833bc3 crypto: rockchip: v2: ahash init/update/final use hardware crypto
+```
+
+kernel-5.10 需更新至以下提交：
+
+```shell
+4d2020372e7e crypto: rockchip: v2: ahash fix hash_algo2name setting error.
+```
+
+若需要使用 otp key 加解密功能，rkbin需更新至以下提交：
+
+1. RK3588
+
+   ```shell
+   23ca562 rk3588: bl32: update version to v1.07
+   ```
+
+2. RK356x
+
+   ```shell
+   86e9bb7 rk3568: bl32: update version to v2.07
+   ```
+
+3. RV1109/RV1126
+
+   ```shell
+   42eea81 rv1126: tee: update version to v2.05
+   ```
 
 ## 目录说明
 
@@ -99,6 +133,7 @@ $ make clean # 清除目标文件
 #include "rkcrypto_core.h"       // 调用cipher、hash、hmac等接口时引用
 #include "rkcrypto_mem.h"        // 调用支持dma_fd的接口时引用
 #include "rkcrypto_otp_key.h"    // 调用otp_key相关接口时引用
+#include "rkcrypto_random.h"     // 调用随机数接口时引用
 ```
 
 - **库文件**
@@ -109,7 +144,7 @@ $ make clean # 清除目标文件
 
 - **应用开发说明文档**
 
-  `Rockchip_Developer_Guide_CRYPTO_CN`
+  `Rockchip_Developer_Guide_Crypto_HWRNG_CN.pdf`
 
 ## FAQ
 
