@@ -133,11 +133,11 @@ static int test_otp_key_virt_tp(void)
 		}
 	}
 
-	printf("virt:\ttest otp_key throughput SUCCESS.\n");
+	printf("virt:\ttest otp_key throughput SUCCESS.\n\n");
 	return 0;
 
 error:
-	printf("virt:\ttest otp_key throughput FAILED!!!\n");
+	printf("virt:\ttest otp_key throughput FAILED!!!\n\n");
 	return -1;
 }
 
@@ -199,7 +199,7 @@ static int test_otp_key_fd_tp(void)
 		}
 	}
 
-	printf("dma_fd:\ttest otp_key throughput SUCCESS.\n");
+	printf("dma_fd:\ttest otp_key throughput SUCCESS.\n\n");
 
 out:
 	if (!in_out)
@@ -416,7 +416,7 @@ static int test_cipher_tp(void)
 		}
 	}
 
-	printf("dma_fd:\ttest cipher throughput SUCCESS.\n");
+	printf("dma_fd:\ttest cipher throughput SUCCESS.\n\n");
 
 	/* Test virt cipher */
 	for (h = 0; h < ARRAY_SIZE(test_item_tbl); h++) {
@@ -441,7 +441,7 @@ static int test_cipher_tp(void)
 		}
 	}
 
-	printf("virt:\ttest cipher throughput SUCCESS.\n");
+	printf("virt:\ttest cipher throughput SUCCESS.\n\n");
 
 out:
 	if (in_out_fd)
@@ -617,7 +617,7 @@ static int test_hash_tp(void)
 		}
 	}
 
-	printf("virt:\ttest hash throughput SUCCESS.\n");
+	printf("virt:\ttest hash throughput SUCCESS.\n\n");
 
 	/* Test dma_fd hash */
 	for (i = 0; i < ARRAY_SIZE(test_hash_tbl); i++) {
@@ -629,7 +629,7 @@ static int test_hash_tp(void)
 		}
 	}
 
-	printf("dma_fd:\ttest hash throughput SUCCESS.\n");
+	printf("dma_fd:\ttest hash throughput SUCCESS.\n\n");
 
 	/* Test virt hmac */
 	for (i = 0; i < ARRAY_SIZE(test_hmac_tbl); i++) {
@@ -641,7 +641,7 @@ static int test_hash_tp(void)
 		}
 	}
 
-	printf("virt:\ttest hmac throughput SUCCESS.\n");
+	printf("virt:\ttest hmac throughput SUCCESS.\n\n");
 
 	/* Test dma_fd hmac */
 	for (i = 0; i < ARRAY_SIZE(test_hmac_tbl); i++) {
@@ -653,7 +653,7 @@ static int test_hash_tp(void)
 		}
 	}
 
-	printf("dma_fd:\ttest hmac throughput SUCCESS.\n");
+	printf("dma_fd:\ttest hmac throughput SUCCESS.\n\n");
 
 out:
 	if (input_fd)
@@ -670,18 +670,15 @@ out:
 RK_RES test_throughput(void)
 {
 	if (test_otp_key_tp())
-		goto error;
+		printf("Test otp key throughput FAILED.\n\n");
 
 	if (test_cipher_tp())
-		goto error;
+		printf("Test cipher throughput FAILED.\n\n");
 
 	if (test_hash_tp())
-		goto error;
+		printf("Test hash throughput FAILED.\n\n");
 
 	printf("Test throughput SUCCESS.\n");
-	return RK_CRYPTO_SUCCESS;
 
-error:
-	printf("Test throughput FAILED!!!\n");
-	return RK_CRYPTO_ERR_GENERIC;
+	return RK_CRYPTO_SUCCESS;
 }
