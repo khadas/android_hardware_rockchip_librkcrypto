@@ -11,11 +11,13 @@
 #include <pthread.h>
 #include <sys/ioctl.h>
 
+#include "cryptodev.h"
 #include "rk_cryptodev.h"
 #include "rkcrypto_mem.h"
 #include "rkcrypto_core.h"
 #include "rkcrypto_core_int.h"
 #include "rkcrypto_trace.h"
+#include "rkcrypto_rsa_helper.h"
 #include "rk_list.h"
 
 #ifndef ARRAY_SIZE
@@ -83,6 +85,7 @@ static const struct {
 	{-EACCES,		RK_CRYPTO_ERR_ACCESS_DENIED},
 	{-EBUSY,		RK_CRYPTO_ERR_BUSY},
 	{-ETIMEDOUT,		RK_CRYPTO_ERR_TIMEOUT},
+	{-ENOKEY,		RK_CRYPTO_ERR_KEY},
 };
 
 static RK_RES kernel_to_crypto_code(uint32_t tee_code)
@@ -651,4 +654,206 @@ RK_RES rk_crypto_fd_ioctl(uint32_t request, struct crypt_fd_map_op *mop)
 	}
 
 	return RK_CRYPTO_SUCCESS;
+}
+
+static RK_RES rk_rsa_crypt_common(void *key, uint16_t flag, uint16_t op,
+				  const uint8_t *in, uint32_t in_len,
+				  uint8_t *out, uint32_t *out_len)
+{
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+	uint8_t *asn1_key = NULL;
+	uint16_t asn1_key_len = RK_RSA_BER_KEY_MAX, key_bits;
+	struct crypt_rsa_op rop;
+
+	CHECK_CRYPTO_INITED();
+
+	asn1_key = malloc(asn1_key_len);
+	if (!asn1_key) {
+		E_TRACE("ioctl cryptodev_fd failed!");
+		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
+	}
+
+	memset(asn1_key, 0x00, asn1_key_len);
+
+	/* Encode the key in ASN1 format */
+	if ((flag & COP_FLAG_RSA_PRIV) == COP_FLAG_RSA_PRIV)
+		res = rk_rsa_privkey_encode((rk_rsa_priv_key_pack *)key,
+					    asn1_key, &asn1_key_len, &key_bits);
+	else
+		res = rk_rsa_pubkey_encode((rk_rsa_pub_key_pack *)key,
+					   asn1_key, &asn1_key_len, &key_bits);
+
+	if (res) {
+		E_TRACE("asn1 encode failed %x!", res);
+		res = RK_CRYPTO_ERR_KEY;
+		goto exit;
+	}
+
+	if (key_bits / 8 != in_len) {
+		E_TRACE("RIOCCRYPT_RSA_CRYPT length not match!");
+		res = RK_CRYPTO_ERR_PARAMETER;
+		goto exit;
+	}
+
+	memset(&rop, 0x00, sizeof(rop));
+
+	rop.op      = op;
+	rop.flags   = flag;
+	rop.key     = (unsigned long)asn1_key | (__u64)0;
+	rop.key_len = asn1_key_len;
+	rop.in      = (unsigned long)in | (__u64)0;
+	rop.in_len  = in_len;
+	rop.out     = (unsigned long)out | (__u64)0;
+
+	res = xioctl(cryptodev_fd, RIOCCRYPT_RSA_CRYPT, &rop);
+	if (res) {
+		E_TRACE("ioctl cryptodev_fd failed! [%d]", -errno);
+		goto exit;
+	}
+
+	*out_len = rop.out_len;
+	res = RK_CRYPTO_SUCCESS;
+exit:
+	memset(asn1_key, 0x00, asn1_key_len);
+
+	if (asn1_key)
+		free(asn1_key);
+
+	return res;
+}
+
+RK_RES rk_rsa_pub_encrypt(const rk_rsa_pub_key_pack *pub, enum RK_RSA_CRYPT_PADDING padding,
+			  const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len)
+{
+	RK_RES res;
+	uint8_t data_pad[MAX_RSA_KEY_BITS / 8];
+	uint32_t data_pad_len = sizeof(data_pad);
+
+	RK_CRYPTO_CHECK_PARAM(!pub || !in || !out || !out_len);
+
+	/* deal with padding */
+	res = rk_rsa_crypt_do_padding(padding, pub->key.n_len, in, in_len, data_pad, &data_pad_len);
+	if (res) {
+		E_TRACE("rsa padding %d error!", padding);
+		return res;
+	}
+
+	return rk_rsa_crypt_common((void *)pub, COP_FLAG_RSA_PUB, AOP_ENCRYPT,
+				   data_pad, data_pad_len, out, out_len);
+}
+
+RK_RES rk_rsa_priv_decrypt(const rk_rsa_priv_key_pack *priv, enum RK_RSA_CRYPT_PADDING padding,
+			   const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len)
+{
+	RK_RES res;
+	uint8_t data_pad[MAX_RSA_KEY_BITS / 8];
+	uint32_t data_pad_len = sizeof(data_pad);
+
+	RK_CRYPTO_CHECK_PARAM(!priv || !in || !out || !out_len);
+	RK_CRYPTO_CHECK_PARAM(priv->key.n_len != in_len);
+
+	res = rk_rsa_crypt_common((void *)priv, COP_FLAG_RSA_PRIV, AOP_DECRYPT,
+				   in, in_len, data_pad, &data_pad_len);
+	if (res) {
+		E_TRACE("rk_rsa_crypt_common error! %x", res);
+		return res;
+	}
+
+	return rk_rsa_crypt_undo_padding(padding, priv->key.n_len,
+					 data_pad, data_pad_len, out, out_len);
+}
+
+RK_RES rk_rsa_priv_encrypt(const rk_rsa_priv_key_pack *priv, enum RK_RSA_CRYPT_PADDING padding,
+			   const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len)
+{
+	RK_RES res;
+	uint8_t data_pad[MAX_RSA_KEY_BITS / 8];
+	uint32_t data_pad_len = sizeof(data_pad);
+
+	RK_CRYPTO_CHECK_PARAM(!priv || !in || !out || !out_len);
+
+	/* deal with padding */
+	res = rk_rsa_crypt_do_padding(padding, priv->key.n_len,
+				      in, in_len, data_pad, &data_pad_len);
+	if (res) {
+		E_TRACE("rsa padding %d error!", padding);
+		return res;
+	}
+
+	return rk_rsa_crypt_common((void *)priv, COP_FLAG_RSA_PRIV, AOP_DECRYPT,
+				   data_pad, data_pad_len, out, out_len);
+}
+
+RK_RES rk_rsa_pub_decrypt(const rk_rsa_pub_key_pack *pub, enum RK_RSA_CRYPT_PADDING padding,
+			  const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len)
+{
+	RK_RES res;
+	uint8_t data_pad[MAX_RSA_KEY_BITS / 8];
+	uint32_t data_pad_len = sizeof(data_pad);
+
+	RK_CRYPTO_CHECK_PARAM(!pub || !in || !out || !out_len);
+	RK_CRYPTO_CHECK_PARAM(pub->key.n_len != in_len);
+
+	res = rk_rsa_crypt_common((void *)pub, COP_FLAG_RSA_PUB, AOP_ENCRYPT,
+				   in, in_len, data_pad, &data_pad_len);
+	if (res) {
+		E_TRACE("rk_rsa_crypt_common error! %x", res);
+		return res;
+	}
+
+	return rk_rsa_crypt_undo_padding(padding, pub->key.n_len,
+					 data_pad, data_pad_len, out, out_len);
+}
+
+RK_RES rk_rsa_sign(const rk_rsa_priv_key_pack *priv, enum RK_RSA_SIGN_PADDING padding,
+		   const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len)
+{
+	RK_RES res;
+	uint8_t data_pad[MAX_RSA_KEY_BITS / 8];
+	uint32_t data_pad_len = sizeof(data_pad);
+
+	RK_CRYPTO_CHECK_PARAM(!priv || !in || !out || !out_len);
+
+	/* deal with padding */
+	res = rk_rsa_sign_do_padding(padding, priv->key.n_len, in, in_len, data_pad, &data_pad_len);
+	if (res) {
+		E_TRACE("rsa padding %d error!", padding);
+		return res;
+	}
+
+	return rk_rsa_crypt_common((void *)priv, COP_FLAG_RSA_PRIV, AOP_DECRYPT,
+				   data_pad, data_pad_len, out, out_len);
+}
+
+RK_RES rk_rsa_verify(const rk_rsa_pub_key_pack *pub, enum RK_RSA_SIGN_PADDING padding,
+		     const uint8_t *in, uint32_t in_len, uint8_t *sign, uint32_t sign_len)
+{
+	RK_RES res;
+	uint8_t data_pad[MAX_RSA_KEY_BITS / 8];
+	uint32_t data_pad_len = sizeof(data_pad);
+	uint8_t dec_pad[MAX_RSA_KEY_BITS / 8];
+	uint32_t dec_pad_len = sizeof(dec_pad);
+
+	RK_CRYPTO_CHECK_PARAM(!pub || !in || !sign);
+	RK_CRYPTO_CHECK_PARAM(pub->key.n_len != sign_len);
+
+	/* deal with padding */
+	res = rk_rsa_sign_do_padding(padding, pub->key.n_len, in, in_len, data_pad, &data_pad_len);
+	if (res) {
+		E_TRACE("rsa padding %d error!", padding);
+		goto exit;
+	}
+
+	res = rk_rsa_crypt_common((void *)pub, COP_FLAG_RSA_PUB, AOP_ENCRYPT,
+				  sign, sign_len, dec_pad, &dec_pad_len);
+	if (res) {
+		E_TRACE("rsa rk_rsa_crypt_common error[%x]!", res);
+		goto exit;
+	}
+
+	if (dec_pad_len != sign_len || memcmp(data_pad, dec_pad, data_pad_len))
+		res = RK_CRYPTO_ERR_VERIFY;
+
+exit:
+	return res;
 }

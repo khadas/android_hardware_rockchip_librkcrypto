@@ -35,6 +35,8 @@ typedef uint32_t rk_handle;
 #define RK_CRYPTO_ERR_BUSY		0xF0000006
 #define RK_CRYPTO_ERR_TIMEOUT		0xF0000007
 #define RK_CRYPTO_ERR_UNINITED		0xF0000008
+#define RK_CRYPTO_ERR_KEY		0xF0000009
+#define RK_CRYPTO_ERR_VERIFY		0xF000000A
 
 /* Algorithm operation */
 #define RK_OP_CIPHER_ENC		1
@@ -68,6 +70,8 @@ typedef uint32_t rk_handle;
 #define MAX_HASH_BLOCK_SIZE		128
 #define MAX_TDES_KEY_SIZE		24
 #define MAX_AES_KEY_SIZE		32
+
+#define MAX_RSA_KEY_BITS		4096
 
 #define RK_CRYPTO_MAX_DATA_LEN		(1 * 1024 * 1024)
 
@@ -124,8 +128,24 @@ enum RK_OEM_OTP_KEYID {
 	RK_OEM_OTP_KEY1 = 1,
 	RK_OEM_OTP_KEY2 = 2,
 	RK_OEM_OTP_KEY3 = 3,
-	RK_OEM_OTP_KEY_FW = 10,	//keyid of fw_encryption_key
+	RK_OEM_OTP_KEY_FW = 10,		// keyid of fw_encryption_key
 	RK_OEM_OTP_KEYMAX
+};
+
+enum RK_RSA_KEY_TYPE {
+	RK_RSA_KEY_TYPE_PLAIN = 0,
+	RK_RSA_KEY_TYPE_KEY0_ENC = RK_OEM_OTP_KEY0 +1,
+	RK_RSA_KEY_TYPE_KEY1_ENC,
+	RK_RSA_KEY_TYPE_KEY2_ENC,
+	RK_RSA_KEY_TYPE_KEY3_ENC,
+	RK_RSA_KEY_TYPE_MAX,
+};
+
+enum RK_RSA_CRYPT_PADDING {
+	RK_RSA_CRYPT_PADDING_NONE
+};
+enum RK_RSA_SIGN_PADDING {
+	RK_RSA_SIGN_PADDING_NONE
 };
 
 typedef struct {
@@ -157,5 +177,43 @@ typedef struct {
 	uint8_t		*key;
 	uint32_t	key_len;
 } rk_hash_config;
+
+typedef struct {
+	const uint8_t		*n;
+	const uint8_t		*e;
+
+	uint16_t		n_len;
+	uint16_t		e_len;
+} rk_rsa_pub_key;
+
+typedef struct {
+	enum RK_RSA_KEY_TYPE	key_type;
+	rk_rsa_pub_key		key;
+} rk_rsa_pub_key_pack;
+
+typedef struct {
+	const uint8_t		*n;
+	const uint8_t		*e;
+	const uint8_t		*d;
+	const uint8_t		*p;
+	const uint8_t		*q;
+	const uint8_t		*dp;
+	const uint8_t		*dq;
+	const uint8_t		*qp;
+
+	uint16_t		n_len;
+	uint16_t		e_len;
+	uint16_t		d_len;
+	uint16_t		p_len;
+	uint16_t		q_len;
+	uint16_t		dp_len;
+	uint16_t		dq_len;
+	uint16_t		qp_len;
+} rk_rsa_priv_key;
+
+typedef struct {
+	enum RK_RSA_KEY_TYPE	key_type;
+	rk_rsa_priv_key		key;
+} rk_rsa_priv_key_pack;
 
 #endif /* _RKCRYPTO_COMMON_H_ */

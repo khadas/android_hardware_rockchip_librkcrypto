@@ -13,6 +13,7 @@
 #include "test_random.h"
 #include "test_stress.h"
 #include "test_multi.h"
+#include "test_rsa.h"
 
 enum {
 	OPTION_TOP = 0,
@@ -27,6 +28,7 @@ enum {
 	THROUGHPUT,
 	STRESS,
 	MULTI,
+	RSA,
 	OPTION_BUTT,
 };
 
@@ -40,6 +42,7 @@ static void guide(void)
 	printf("\t-cipher        Function of cipher\n");
 	printf("\t-hash          Function of hash\n");
 	printf("\t-hmac          Function of hmac\n");
+	printf("\t-rsa           Function of rsa\n");
 	printf("\t-setkey        Function of setkey. NOTE: it will write key to OTP area.\n");
 	printf("\t-otpkey        Function of otpkey\n");
 	printf("\t-mem           Maximum buffer size requested by crypto mem alloc, test until alloc failed\n");
@@ -66,6 +69,7 @@ int main(int argc, char *argv[])
 		{"throughput",	0,	NULL,	THROUGHPUT},
 		{"stress",	1,	NULL,	STRESS},
 		{"multi",	0,	NULL,	MULTI},
+		{"rsa",		0,	NULL,	RSA},
 		{NULL,		0,	NULL,	0},
 	};
 
@@ -84,12 +88,15 @@ int main(int argc, char *argv[])
 			break;
 		case CIPHER:
 			test_cipher(verbose);
-			break;;
+			break;
 		case HASH:
 			test_hash(verbose);
 			break;
 		case HMAC:
 			test_hmac(verbose);
+			break;
+		case RSA:
+			test_rsa(verbose);
 			break;
 		case SETKEY:
 			test_write_otp_key();
