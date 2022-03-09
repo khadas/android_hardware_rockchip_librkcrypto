@@ -142,6 +142,36 @@ $ make clean # 清除目标文件
 
   `librkcrypto.a` (linux平台)
 
+- **日志打印**
+
+  rkcrypto的日志等级划分如下：
+
+  等级1 - TRACE_ERROR：错误信息
+
+  等级2 - TRACE_INFO：常用信息，例如版本号信息等，默认是等级2
+
+  等级3 - TRACE_DEBUG：一般的调试信息
+
+  等级4 - TRACE_VERBOSE：冗长的调试信息
+
+  可以通过以下方式，按需设置日志等级，设置后将打印当前和低于当前等级的日志，注意设备重启后默认是等级2：
+
+  - 使用rkcrypto提供的API：
+
+  ```c
+  RK_RES rkcrypto_set_trace_level(enum RKCRYPTO_TRACE_LEVEL level);
+  ```
+
+  - 使用指令：
+
+  ```shell
+  # Android
+  setprop vendor.rkcrypto.trace.level 1/2/3/4
+
+  # Linux
+  export rkcrypto_trace_level=1/2/3/4
+  ```
+
 - **应用开发说明文档**
 
   `Rockchip_Developer_Guide_Crypto_HWRNG_CN.pdf`

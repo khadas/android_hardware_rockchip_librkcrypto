@@ -7,41 +7,32 @@
 #include <stdio.h>
 #include "rkcrypto_common.h"
 
-#define RKCRYPTO_LOG_TAG	"rkcrypto"
+enum RKCRYPTO_TRACE_LEVEL {
+	TRACE_TOP     = 0,
+	TRACE_ERROR   = 1,
+	TRACE_INFO    = 2,
+	TRACE_DEBUG   = 3,
+	TRACE_VERBOSE = 4,
+	TRACE_BUTT,
+};
 
-#ifdef ANDROID
-#include <android/log.h>
+void trace_printf(int level, const char *function, int line, const char *fmt, ...);
+void hex_dump(int level, const char *function, int line, const void *buffer, int len, const char *fmt, ...);
 
-#if DEBUG
-#define D_TRACE(fmt,...) \
-	__android_log_print(ANDROID_LOG_DEBUG, RKCRYPTO_LOG_TAG,\
-			"[%s, %d]: "fmt, __func__, __LINE__, ##__VA_ARGS__)
-#else
-#define D_TRACE(fmt,...)		(void)0
-#endif
+#define V_TRACE(...) \
+	trace_printf(TRACE_VERBOSE, __func__, __LINE__, __VA_ARGS__)
 
-#define I_TRACE(fmt,...) \
-	__android_log_print(ANDROID_LOG_INFO, RKCRYPTO_LOG_TAG,\
-			"[%s, %d]: "fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define D_TRACE(...) \
+	trace_printf(TRACE_DEBUG, __func__, __LINE__, __VA_ARGS__)
 
-#define E_TRACE(fmt,...) \
-	__android_log_print(ANDROID_LOG_ERROR, RKCRYPTO_LOG_TAG,\
-			"[%s, %d]: "fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define I_TRACE(...) \
+	trace_printf(TRACE_INFO, __func__, __LINE__, __VA_ARGS__)
 
-#else /* LINUX */
-#if DEBUG
-#define D_TRACE(fmt,...) \
-	printf("D %s: [%s, %d]: "fmt"\n", RKCRYPTO_LOG_TAG, __func__, __LINE__, ##__VA_ARGS__)
-#else
-#define D_TRACE(fmt,...)		(void)0
-#endif
+#define E_TRACE(...) \
+	trace_printf(TRACE_ERROR, __func__, __LINE__, __VA_ARGS__)
 
-#define I_TRACE(fmt,...) \
-	printf("I %s: [%s, %d]: "fmt"\n", RKCRYPTO_LOG_TAG, __func__, __LINE__, ##__VA_ARGS__)
-
-#define E_TRACE(fmt,...) \
-	printf("E %s: [%s, %d]: "fmt"\n", RKCRYPTO_LOG_TAG, __func__, __LINE__, ##__VA_ARGS__)
-#endif /* ANDROID */
+#define VHEX_DUMP(data, len, fmt, ...) \
+	hex_dump(TRACE_VERBOSE, __func__, __LINE__, buffer, len, fmt, __VA_ARGS__)
 
 #define RK_CRYPTO_CHECK_PARAM(_val)\
 	do {\
@@ -50,5 +41,7 @@
 			return RK_CRYPTO_ERR_PARAMETER;\
 		}\
 	} while (0)
+
+RK_RES rkcrypto_set_trace_level(enum RKCRYPTO_TRACE_LEVEL level);
 
 #endif /* _RKCRYPTO_TRACE_H_ */

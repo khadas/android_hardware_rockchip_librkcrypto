@@ -24,7 +24,8 @@ TEEC_PATH := $(LOCAL_PATH)/third_party/optee_client/libteec
 ###############################################################################
 # build librkcrypto
 ###############################################################################
-LOCAL_LDFLAGS += -llog
+LOCAL_LDFLAGS += -llog \
+		 -lcutils
 
 SRC_FILES_DIR := $(wildcard $(LOCAL_PATH)/src/*.c)
 SRC_FILES_DIR += $(wildcard $(LOCAL_PATH)/third_party/libdrm/src/*.c)
