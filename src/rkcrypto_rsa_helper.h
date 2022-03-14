@@ -38,11 +38,13 @@ RK_RES rk_rsa_pubkey_encode(rk_rsa_pub_key_pack *pub,
 RK_RES rk_rsa_privkey_encode(rk_rsa_priv_key_pack *priv,
 			     uint8_t *asn1_key, uint16_t *asn1_key_len, uint16_t *key_bits);
 
-RK_RES rk_rsa_crypt_do_padding(enum RK_RSA_CRYPT_PADDING padding, uint16_t key_len,
+RK_RES rk_rsa_crypt_do_padding(enum RK_RSA_CRYPT_PADDING padding,
+			       uint16_t key_len, bool is_priv_key,
 			       const uint8_t *data, uint32_t data_len,
 			       uint8_t *pad, uint32_t *pad_len);
 
-RK_RES rk_rsa_crypt_undo_padding(enum RK_RSA_CRYPT_PADDING padding, uint16_t key_len,
+RK_RES rk_rsa_crypt_undo_padding(enum RK_RSA_CRYPT_PADDING padding,
+				 uint16_t key_len, bool is_priv_key,
 				 const uint8_t *pad, uint32_t pad_len,
 				 uint8_t *data, uint32_t *data_len);
 

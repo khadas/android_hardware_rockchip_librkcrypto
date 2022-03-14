@@ -14,21 +14,30 @@
 
 #define TEST_BUFFER_SIZE	sizeof(no_padding_data)
 
-#define TEST_END_PASS() \
-	printf("****************** %s test PASS !!! ******************\n", __func__)
+#define TEST_END_PASS(padding_name) \
+	printf("****************** %-18s %-16s test PASS !!! ******************\n", \
+	       __func__, padding_name)
 
-#define TEST_END_FAIL() \
-	printf("****************** %s test FAIL !!! ******************\n", __func__)
+#define TEST_END_FAIL(padding_name) \
+	printf("****************** %-18s %-16s test FAIL !!! ******************\n", \
+	       __func__, padding_name)
 
-typedef RK_RES (*test_rsa_one)(uint32_t padding, const uint8_t *in, uint32_t in_len,
+typedef RK_RES (*test_rsa_one)(uint32_t padding, const char *padding_name,
+			       const uint8_t *in, uint32_t in_len,
 			       const uint8_t *expect, int verbose);
 
 struct test_rsa_item {
 	test_rsa_one	do_test;
 	uint32_t	padding;
+	const char	*padding_name;
 	const uint8_t	*in;
 	uint32_t	in_len;
 	const uint8_t	*expect;
+};
+
+static const uint8_t test_data[] = {
+0x31, 0x5d, 0xfa, 0x52, 0xa4, 0x93, 0x52, 0xf8, 0xf5, 0xed, 0x39, 0xf4, 0xf8, 0x23, 0x4b, 0x30,
+0x11, 0xa2, 0x2c, 0x5b, 0xa9, 0x8c, 0xcf, 0xdf, 0x19, 0x66, 0xf5, 0xf5, 0x1a, 0x6d, 0xf6, 0x25,
 };
 
 static const uint8_t no_padding_data[] = {
@@ -164,17 +173,41 @@ static const uint8_t rsa_2048_qp[] = {
 };
 #endif
 
-static RK_RES test_rsa_pub_enc(uint32_t padding, const uint8_t *in, uint32_t in_len,
+static RK_RES test_rsa_pub_enc(uint32_t padding, const char *padding_name,
+			       const uint8_t *in, uint32_t in_len,
 			       const uint8_t *expect, int verbose);
-static RK_RES test_rsa_priv_enc(uint32_t padding, const uint8_t *in, uint32_t in_len,
+static RK_RES test_rsa_priv_enc(uint32_t padding, const char *padding_name,
+				const uint8_t *in, uint32_t in_len,
 				const uint8_t *expect, int verbose);
-static RK_RES test_rsa_sign(uint32_t padding, const uint8_t *in, uint32_t in_len,
+static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
+			    const uint8_t *in, uint32_t in_len,
 			    const uint8_t *expect, int verbose);
 
+#define TEST_RSA_CRYPT(test, name, data)	{test, RK_RSA_CRYPT_PADDING_##name, #name, \
+						 data, sizeof(data), NULL}
+#define TEST_RSA_SIGN(test, name, data)		{test, RK_RSA_SIGN_PADDING_##name, #name, \
+						 data, sizeof(data), NULL}
+
 static const struct test_rsa_item test_rsa_tbl[] = {
-	{test_rsa_pub_enc,  RK_RSA_CRYPT_PADDING_NONE, no_padding_data, sizeof(no_padding_data), NULL},
-	{test_rsa_priv_enc, RK_RSA_CRYPT_PADDING_NONE, no_padding_data, sizeof(no_padding_data), NULL},
-	{test_rsa_sign,     RK_RSA_CRYPT_PADDING_NONE, no_padding_data, sizeof(no_padding_data), NULL},
+	TEST_RSA_CRYPT(test_rsa_pub_enc,  NONE,         no_padding_data),
+	TEST_RSA_CRYPT(test_rsa_pub_enc,  BLOCK_TYPE_0, test_data),
+	TEST_RSA_CRYPT(test_rsa_pub_enc,  BLOCK_TYPE_1, test_data),
+	TEST_RSA_CRYPT(test_rsa_pub_enc,  BLOCK_TYPE_2, test_data),
+	TEST_RSA_CRYPT(test_rsa_pub_enc,  OAEP_SHA1,    test_data),
+	TEST_RSA_CRYPT(test_rsa_pub_enc,  OAEP_SHA256,  test_data),
+	TEST_RSA_CRYPT(test_rsa_pub_enc,  OAEP_SHA512,  test_data),
+	TEST_RSA_CRYPT(test_rsa_pub_enc,  PKCS1_V1_5,   test_data),
+
+	TEST_RSA_CRYPT(test_rsa_priv_enc, NONE,         no_padding_data),
+	TEST_RSA_CRYPT(test_rsa_priv_enc, BLOCK_TYPE_0, test_data),
+	TEST_RSA_CRYPT(test_rsa_priv_enc, BLOCK_TYPE_1, test_data),
+	TEST_RSA_CRYPT(test_rsa_priv_enc, BLOCK_TYPE_2, test_data),
+	TEST_RSA_CRYPT(test_rsa_priv_enc, OAEP_SHA1,    test_data),
+	TEST_RSA_CRYPT(test_rsa_priv_enc, OAEP_SHA256,  test_data),
+	TEST_RSA_CRYPT(test_rsa_priv_enc, OAEP_SHA512,  test_data),
+	TEST_RSA_CRYPT(test_rsa_priv_enc, PKCS1_V1_5,   test_data),
+
+	TEST_RSA_SIGN(test_rsa_sign,      NONE,         no_padding_data),
 };
 
 static void test_init_pubkey(rk_rsa_pub_key_pack *pub)
@@ -216,7 +249,8 @@ static void test_init_privkey(rk_rsa_priv_key_pack *priv)
 #endif
 }
 
-static RK_RES test_rsa_pub_enc(uint32_t padding, const uint8_t *in, uint32_t in_len,
+static RK_RES test_rsa_pub_enc(uint32_t padding, const char *padding_name,
+			       const uint8_t *in, uint32_t in_len,
 			       const uint8_t *expect, int verbose)
 {
 	RK_RES res = RK_CRYPTO_SUCCESS;
@@ -272,7 +306,7 @@ static RK_RES test_rsa_pub_enc(uint32_t padding, const uint8_t *in, uint32_t in_
 	}
 
 	if (verbose)
-		TEST_END_PASS();
+		TEST_END_PASS(padding_name);
 
 exit:
 	if (enc_buf)
@@ -282,12 +316,13 @@ exit:
 		free(dec_buf);
 
 	if (res && verbose)
-		TEST_END_FAIL();
+		TEST_END_FAIL(padding_name);
 
 	return res;
 }
 
-static RK_RES test_rsa_priv_enc(uint32_t padding, const uint8_t *in, uint32_t in_len,
+static RK_RES test_rsa_priv_enc(uint32_t padding, const char *padding_name,
+				const uint8_t *in, uint32_t in_len,
 				const uint8_t *expect, int verbose)
 {
 	RK_RES res = RK_CRYPTO_SUCCESS;
@@ -343,7 +378,7 @@ static RK_RES test_rsa_priv_enc(uint32_t padding, const uint8_t *in, uint32_t in
 	}
 
 	if (verbose)
-		TEST_END_PASS();
+		TEST_END_PASS(padding_name);
 
 exit:
 	if (enc_buf)
@@ -354,12 +389,13 @@ exit:
 		free(dec_buf);
 
 	if (res && verbose)
-		TEST_END_FAIL();
+		TEST_END_FAIL(padding_name);
 
 	return res;
 }
 
-static RK_RES test_rsa_sign(uint32_t padding, const uint8_t *in, uint32_t in_len,
+static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
+			    const uint8_t *in, uint32_t in_len,
 			    const uint8_t *expect, int verbose)
 {
 	RK_RES res = RK_CRYPTO_SUCCESS;
@@ -409,14 +445,14 @@ static RK_RES test_rsa_sign(uint32_t padding, const uint8_t *in, uint32_t in_len
 	res = RK_CRYPTO_SUCCESS;
 
 	if (verbose)
-		TEST_END_PASS();
+		TEST_END_PASS(padding_name);
 
 exit:
 	if (sign)
 		free(sign);
 
 	if (res && verbose)
-		TEST_END_FAIL();
+		TEST_END_FAIL(padding_name);
 
 	return res;
 }
@@ -434,6 +470,7 @@ RK_RES test_rsa(int verbose)
 
 	for (i = 0; i < ARRAY_SIZE(test_rsa_tbl); i++) {
 		res = test_rsa_tbl[i].do_test(test_rsa_tbl[i].padding,
+					      test_rsa_tbl[i].padding_name,
 					      test_rsa_tbl[i].in, test_rsa_tbl[i].in_len,
 					      test_rsa_tbl[i].expect, verbose);
 		if (res)
