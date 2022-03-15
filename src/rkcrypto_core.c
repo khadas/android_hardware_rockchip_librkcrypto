@@ -341,6 +341,30 @@ static RK_RES rk_update_user_iv(const rk_cipher_config *cfg)
 	return RK_CRYPTO_SUCCESS;
 }
 
+static size_t rk_mpi_bitlen(const uint8_t *data, uint32_t data_len)
+{
+	uint32_t i;
+
+	while (data_len--) {
+		if (*data) {
+			uint8_t tmp = *data;
+
+			for (i = 0; i < 8; i++) {
+				if (!tmp)
+					break;
+
+				tmp = tmp >> 1;
+			}
+
+			return data_len * 8 + i;
+		}
+
+		data++;
+	}
+
+	return 0;
+}
+
 RK_RES rk_crypto_init(void)
 {
 	I_TRACE("%s\n", RK_CRYPTO_API_FULL_VERSION);
@@ -809,16 +833,21 @@ RK_RES rk_rsa_pub_decrypt(const rk_rsa_pub_key_pack *pub, enum RK_RSA_CRYPT_PADD
 }
 
 RK_RES rk_rsa_sign(const rk_rsa_priv_key_pack *priv, enum RK_RSA_SIGN_PADDING padding,
-		   const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len)
+		   const uint8_t *in, uint32_t in_len, const uint8_t *hash,
+		   uint8_t *out, uint32_t *out_len)
 {
 	RK_RES res;
 	uint8_t data_pad[MAX_RSA_KEY_BITS / 8];
 	uint32_t data_pad_len = sizeof(data_pad);
 
-	RK_CRYPTO_CHECK_PARAM(!priv || !in || !out || !out_len);
+	RK_CRYPTO_CHECK_PARAM(!in && !hash);
+	RK_CRYPTO_CHECK_PARAM(in && in_len == 0);
+	RK_CRYPTO_CHECK_PARAM(!priv || !out || !out_len);
 
 	/* deal with padding */
-	res = rk_rsa_sign_do_padding(padding, priv->key.n_len, in, in_len, data_pad, &data_pad_len);
+	res = rk_rsa_sign_do_padding(padding, priv->key.n_len,
+				     rk_mpi_bitlen(priv->key.n, priv->key.n_len),
+				     in, in_len, hash, data_pad, &data_pad_len);
 	if (res) {
 		E_TRACE("rsa padding %d error!", padding);
 		return res;
@@ -829,23 +858,17 @@ RK_RES rk_rsa_sign(const rk_rsa_priv_key_pack *priv, enum RK_RSA_SIGN_PADDING pa
 }
 
 RK_RES rk_rsa_verify(const rk_rsa_pub_key_pack *pub, enum RK_RSA_SIGN_PADDING padding,
-		     const uint8_t *in, uint32_t in_len, uint8_t *sign, uint32_t sign_len)
+		     const uint8_t *in, uint32_t in_len, const uint8_t *hash,
+		     uint8_t *sign, uint32_t sign_len)
 {
 	RK_RES res;
-	uint8_t data_pad[MAX_RSA_KEY_BITS / 8];
-	uint32_t data_pad_len = sizeof(data_pad);
 	uint8_t dec_pad[MAX_RSA_KEY_BITS / 8];
 	uint32_t dec_pad_len = sizeof(dec_pad);
 
-	RK_CRYPTO_CHECK_PARAM(!pub || !in || !sign);
+	RK_CRYPTO_CHECK_PARAM(!in && !hash);
+	RK_CRYPTO_CHECK_PARAM(in && in_len == 0);
+	RK_CRYPTO_CHECK_PARAM(!pub || !sign);
 	RK_CRYPTO_CHECK_PARAM(pub->key.n_len != sign_len);
-
-	/* deal with padding */
-	res = rk_rsa_sign_do_padding(padding, pub->key.n_len, in, in_len, data_pad, &data_pad_len);
-	if (res) {
-		E_TRACE("rsa padding %d error!", padding);
-		goto exit;
-	}
 
 	res = rk_rsa_crypt_common((void *)pub, COP_FLAG_RSA_PUB, AOP_ENCRYPT,
 				  sign, sign_len, dec_pad, &dec_pad_len);
@@ -854,9 +877,15 @@ RK_RES rk_rsa_verify(const rk_rsa_pub_key_pack *pub, enum RK_RSA_SIGN_PADDING pa
 		goto exit;
 	}
 
-	if (dec_pad_len != sign_len || memcmp(data_pad, dec_pad, data_pad_len))
-		res = RK_CRYPTO_ERR_VERIFY;
+	/* deal with padding */
+	res = rk_rsa_sign_undo_padding(padding, pub->key.n_len,
+				       rk_mpi_bitlen(pub->key.n, pub->key.n_len),
+				       in, in_len, hash, dec_pad);
+	if (res) {
+		E_TRACE("rsa padding %d error!", padding);
+		goto exit;
+	}
 
 exit:
-	return res;
+	return res ? RK_CRYPTO_ERR_VERIFY : RK_CRYPTO_SUCCESS;
 }

@@ -29,8 +29,10 @@ RK_RES rk_rsa_priv_encrypt(const rk_rsa_priv_key_pack *priv, enum RK_RSA_CRYPT_P
 RK_RES rk_rsa_pub_decrypt(const rk_rsa_pub_key_pack *pub, enum RK_RSA_CRYPT_PADDING padding,
 			  const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len);
 RK_RES rk_rsa_sign(const rk_rsa_priv_key_pack *priv, enum RK_RSA_SIGN_PADDING padding,
-		   const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len);
+		   const uint8_t *in, uint32_t in_len, const uint8_t *hash,
+		   uint8_t *out, uint32_t *out_len);
 RK_RES rk_rsa_verify(const rk_rsa_pub_key_pack *pub, enum RK_RSA_SIGN_PADDING padding,
-		     const uint8_t *in, uint32_t in_len, uint8_t *sign, uint32_t sign_len);
+		     const uint8_t *in, uint32_t in_len, const uint8_t *hash,
+		     uint8_t *sign, uint32_t sign_len);
 
 #endif

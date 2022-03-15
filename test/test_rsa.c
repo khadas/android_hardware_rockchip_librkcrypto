@@ -207,7 +207,12 @@ static const struct test_rsa_item test_rsa_tbl[] = {
 	TEST_RSA_CRYPT(test_rsa_priv_enc, OAEP_SHA512,  test_data),
 	TEST_RSA_CRYPT(test_rsa_priv_enc, PKCS1_V1_5,   test_data),
 
-	TEST_RSA_SIGN(test_rsa_sign,      NONE,         no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,      PKCS1_V15_SHA1,   no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,      PKCS1_V15_SHA256, no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,      PKCS1_V15_SHA512, no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,	  PKCS1_PSS_SHA1,   no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,	  PKCS1_PSS_SHA256, no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,	  PKCS1_PSS_SHA512, no_padding_data),
 };
 
 static void test_init_pubkey(rk_rsa_pub_key_pack *pub)
@@ -414,7 +419,7 @@ static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
 	test_init_pubkey(&pub_key);
 	test_init_privkey(&priv_key);
 
-	res = rk_rsa_sign(&priv_key, padding, in, in_len, sign, &sign_len);
+	res = rk_rsa_sign(&priv_key, padding, in, in_len, NULL, sign, &sign_len);
 	if (res) {
 		printf("rk_rsa_sign failed %x\n", res);
 		goto exit;
@@ -429,14 +434,14 @@ static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
 		}
 	}
 
-	res = rk_rsa_verify(&pub_key, padding, in, in_len, sign, sign_len);
+	res = rk_rsa_verify(&pub_key, padding, in, in_len, NULL, sign, sign_len);
 	if (res) {
 		printf("rk_rsa_verify failed %x\n", res);
 		goto exit;
 	}
 
 	*sign = 0xaa;
-	res = rk_rsa_verify(&pub_key, padding, in, in_len, sign, sign_len);
+	res = rk_rsa_verify(&pub_key, padding, in, in_len, NULL, sign, sign_len);
 	if (res != RK_CRYPTO_ERR_VERIFY) {
 		printf("rk_rsa_verify should be RK_CRYPTO_ERR_VERIFY but %x\n", res);
 		goto exit;

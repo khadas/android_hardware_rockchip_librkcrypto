@@ -48,13 +48,12 @@ RK_RES rk_rsa_crypt_undo_padding(enum RK_RSA_CRYPT_PADDING padding,
 				 const uint8_t *pad, uint32_t pad_len,
 				 uint8_t *data, uint32_t *data_len);
 
-RK_RES rk_rsa_sign_do_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len,
-			      const uint8_t *data, uint32_t data_len,
+RK_RES rk_rsa_sign_do_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len, uint16_t n_bits,
+			      const uint8_t *data, uint32_t data_len, const uint8_t *hash,
 			      uint8_t *pad, uint32_t *pad_len);
 
-RK_RES rk_rsa_sign_undo_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len,
-				const uint8_t *pad, uint32_t pad_len,
-				uint8_t *data, uint32_t *data_len);
-
+RK_RES rk_rsa_sign_undo_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len, uint16_t n_bits,
+				const uint8_t *data, uint32_t data_len,
+				const uint8_t *hash, const uint8_t *dec);
 #endif
 

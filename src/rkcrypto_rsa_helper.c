@@ -41,6 +41,41 @@ typedef struct {
 	uint8_t		need_plus;	//to identify weather the data is a positive number
 } asn1_object_t;
 
+struct hash_oid_item {
+	uint32_t	hash_algo;
+	const uint8_t	*oid;
+	uint32_t	oid_size;
+};
+
+static const uint8_t sha1_oid[]   = {0x2b, 0x0e, 0x03, 0x02, 0x1a};
+static const uint8_t sha224_oid[] = {0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04};
+static const uint8_t sha256_oid[] = {0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01};
+static const uint8_t sha384_oid[] = {0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02};
+static const uint8_t sha512_oid[] = {0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03};
+
+struct hash_oid_item hash_oid_tbl[] = {
+	{RK_ALGO_SHA1,   sha1_oid,   sizeof(sha1_oid)},
+	{RK_ALGO_SHA224, sha224_oid, sizeof(sha224_oid)},
+	{RK_ALGO_SHA256, sha256_oid, sizeof(sha256_oid)},
+	{RK_ALGO_SHA384, sha384_oid, sizeof(sha384_oid)},
+	{RK_ALGO_SHA512, sha512_oid, sizeof(sha512_oid)},
+};
+
+static RK_RES get_oid_by_md(uint32_t hash_algo, const uint8_t **oid, uint32_t *old_len)
+{
+	uint32_t i;
+
+	for (i = 0; i < ARRAY_SIZE(hash_oid_tbl); i++) {
+		if (hash_oid_tbl[i].hash_algo == hash_algo) {
+			*oid     = hash_oid_tbl[i].oid;
+			*old_len = hash_oid_tbl[i].oid_size;
+			return RK_CRYPTO_SUCCESS;
+		}
+	}
+
+	return RK_CRYPTO_ERR_PARAMETER;
+}
+
 static RK_RES asn1_compose_len(uint32_t len, uint8_t *field, uint32_t *field_len)
 {
 	uint8_t tmp_field[4], i, j;
@@ -405,39 +440,52 @@ static RK_RES rsa_padding_check_pkcs15_type(uint16_t key_len, bool is_priv_key,
 	return RK_CRYPTO_SUCCESS;
 }
 
-static void get_hash_algo_from_padding(enum RK_RSA_CRYPT_PADDING padding,
+static RK_RES get_hash_algo_from_padding(uint32_t padding,
 				       uint32_t *hlen, uint32_t *hash_algo)
 {
 	uint32_t shaalgo = RK_ALGO_SHA1;
 
 	switch (padding) {
 	case RK_RSA_CRYPT_PADDING_OAEP_SHA1:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA1:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA1:
 		*hlen = SHA1_HASH_SIZE;
 		shaalgo = RK_ALGO_SHA1;
 		break;
 	case RK_RSA_CRYPT_PADDING_OAEP_SHA224:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA224:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA224:
 		*hlen = SHA224_HASH_SIZE;
 		shaalgo = RK_ALGO_SHA224;
 		break;
 	case RK_RSA_CRYPT_PADDING_OAEP_SHA256:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA256:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA256:
 		*hlen = SHA256_HASH_SIZE;
 		shaalgo = RK_ALGO_SHA256;
 		break;
 	case RK_RSA_CRYPT_PADDING_OAEP_SHA384:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA384:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA384:
 		*hlen = SHA384_HASH_SIZE;
 		shaalgo = RK_ALGO_SHA384;
 		break;
 	case RK_RSA_CRYPT_PADDING_OAEP_SHA512:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA512:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA512:
 		*hlen = SHA512_HASH_SIZE;
 		shaalgo = RK_ALGO_SHA512;
 		break;
 	default:
+		D_TRACE("unknown padding %x", padding);
 		*hlen = 0;
 		shaalgo = 0;
-		break;
+		return RK_CRYPTO_ERR_PADDING;
 	}
 
 	*hash_algo = shaalgo;
+
+	return RK_CRYPTO_SUCCESS;
 }
 
 static RK_RES calc_padding_digest(uint32_t algo, const uint8_t *data, uint32_t data_len,
@@ -558,7 +606,9 @@ static RK_RES rsa_padding_add_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint1
 	RK_CRYPTO_CHECK_PARAM(label_len != 0 || label);
 
 	olen = key_len;
-	get_hash_algo_from_padding(padding, &hlen, &hash_algo);
+	res = get_hash_algo_from_padding(padding, &hlen, &hash_algo);
+	if (res)
+		goto error;
 
 	/* first comparison checks for overflow */
 	if (in_len + 2 * hlen + 2 < in_len || olen < in_len + 2 * hlen + 2)
@@ -617,7 +667,9 @@ RK_RES rsa_padding_check_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint16_t k
 	uint32_t hash_algo;
 
 	ilen = key_len;
-	get_hash_algo_from_padding(padding, &hlen, &hash_algo);
+	res = get_hash_algo_from_padding(padding, &hlen, &hash_algo);
+	if (res)
+		return res;
 
 	buf = malloc(ilen);
 	if (!buf)
@@ -689,6 +741,308 @@ RK_RES rsa_padding_check_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint16_t k
 	memcpy(out, p, *out_len);
 
 	return RK_CRYPTO_SUCCESS;
+}
+
+
+/*
+ * Implementation of the PKCS#1 v2.1 RSASSA-PKCS1-V1_5-SIGN function
+ * Construct a PKCS v1.5 encoding of a hashed message
+ */
+static int rsa_padding_add_pkcs15_sign_type(uint32_t hash_algo, uint16_t key_len,
+					    const uint8_t *hash, uint8_t hash_len, uint8_t *out)
+{
+	RK_RES res;
+	uint32_t oid_size  = 0;
+	uint32_t nb_pad    = key_len;
+	uint8_t *p = out;
+	const uint8_t *oid  = NULL;
+
+	/* Gather length of hash to sign */
+	res = get_oid_by_md(hash_algo, &oid, &oid_size);
+	if (res)
+		return RK_CRYPTO_ERR_PADDING;
+
+	/* Double-check that 8 + hash_len + oid_size can be used as a
+	 * 1-byte ASN.1 length encoding and that there's no overflow.
+	 */
+	if (8 + hash_len + oid_size >= 0x80 ||
+	    10 + hash_len < hash_len ||
+	    10 + hash_len + oid_size < 10 + hash_len)
+		return RK_CRYPTO_ERR_PADDING;
+
+	/*
+	 * Static bounds check:
+	 * - Need 10 bytes for five tag-length pairs.
+	 *   (Insist on 1-byte length encodings to protect against variants of
+	 *    Bleichenbacher's forgery attack against lax PKCS#1v1.5 verification)
+	 * - Need hash_len bytes for hash
+	 * - Need oid_size bytes for hash alg OID.
+	 */
+	if (nb_pad < 10 + hash_len + oid_size)
+		return RK_CRYPTO_ERR_PADDING;
+
+	nb_pad -= 10 + hash_len + oid_size;
+
+	/* Need space for signature header and padding delimiter (3 bytes),
+	 * and 8 bytes for the minimal padding
+	 */
+	if (nb_pad < 3 + 8)
+		return RK_CRYPTO_ERR_PADDING;
+
+	nb_pad -= 3;
+
+	/* Now nb_pad is the amount of memory to be filled
+	 * with padding, and at least 8 bytes long.
+	 */
+
+	/* Write signature header and padding */
+	*p++ = 0;
+	*p++ = MBEDTLS_RSA_SIGN;
+	memset(p, 0xFF, nb_pad);
+	p += nb_pad;
+	*p++ = 0;
+
+	/* Signing hashed data, add corresponding ASN.1 structure
+	 *
+	 * DigestInfo ::= SEQUENCE {
+	 *	 digestAlgorithm DigestAlgorithmIdentifier,
+	 *	 digest Digest }
+	 * DigestAlgorithmIdentifier ::= AlgorithmIdentifier
+	 * Digest ::= OCTET STRING
+	 *
+	 * Schematic:
+	 * TAG-SEQ + LEN [ TAG-SEQ + LEN [ TAG-OID + LEN [ OID  ]
+	 *                                 TAG-NULL + LEN [ NULL ] ]
+	 *                 TAG-OCTET + LEN [ HASH ] ]
+	 */
+	*p++ = ASN1_SEQUENCE;
+	*p++ = (uint8_t)(0x08 + oid_size + hash_len);
+	*p++ = ASN1_SEQUENCE;
+	*p++ = (uint8_t)(0x04 + oid_size);
+	*p++ = ASN1_OBJ_IDENTIFIER;
+	*p++ = (uint8_t)oid_size;
+	memcpy(p, oid, oid_size);
+	p += oid_size;
+	*p++ = ASN1_NULL;
+	*p++ = 0x00;
+	*p++ = ASN1_OCT_STRING;
+	*p++ = (uint8_t)hash_len;
+	memcpy(p, hash, hash_len);
+	p += hash_len;
+
+	return RK_CRYPTO_SUCCESS;
+}
+
+/*
+ * Implementation of the PKCS#1 v2.1 RSASSA-PSS-SIGN function
+ */
+RK_RES rsa_padding_add_pss_type(uint16_t key_len, uint16_t n_bits,
+				uint32_t hash_algo, const uint8_t *hash,
+				uint32_t hash_len, uint8_t *out)
+{
+	uint32_t olen;
+	uint8_t *p = out;
+	uint8_t salt[SHA512_HASH_SIZE];
+	uint32_t slen, hlen, min_slen, offset = 0;
+	RK_RES res;
+	uint32_t msb;
+	rk_hash_config hash_cfg;
+	rk_handle hash_hdl;
+
+	olen = key_len;
+	hlen = hash_len;
+	slen = hlen;
+
+	/* Calculate the largest possible salt length. Normally this is the hash
+	 * length, which is the maximum length the salt can have. If there is not
+	 * enough room, use the maximum salt length that fits. The constraint is
+	 * that the hash length plus the salt length plus 2 bytes must be at most
+	 * the key length. This complies with FIPS 186-4.5.5 (e) and RFC 8017
+	 * (PKCS#1 v2.2) 9.1.1 step 3.
+	 */
+	min_slen = hlen - 2;
+	if (olen < hlen + min_slen + 2)
+		return RK_CRYPTO_ERR_PADDING;
+	else if (olen >= hlen + hlen + 2)
+		slen = hlen;
+	else
+		slen = olen - hlen - 2;
+
+	memset(out, 0, olen);
+
+	/* Generate salt of length slen */
+	res = rk_get_random(salt, slen);
+	if (res)
+		return RK_CRYPTO_ERR_PADDING;
+
+	/* Note: EMSA-PSS encoding is over the length of N - 1 bits */
+	msb = n_bits - 1;
+	p += olen - hlen * 2 - 2;
+	*p++ = 0x01;
+	memcpy(p, salt, slen);
+	p += slen;
+
+	/* Generate H = Hash( M' ) */
+	memset(&hash_cfg, 0x00, sizeof(hash_cfg));
+	hash_cfg.algo = hash_algo;
+
+	res = rk_hash_init(&hash_cfg, &hash_hdl);
+	if (res)
+		goto exit;
+
+	res = rk_hash_update_virt(hash_hdl, p, 8);
+	if (res) {
+		rk_hash_final(hash_hdl, NULL);
+		goto exit;
+	}
+
+	res = rk_hash_update_virt(hash_hdl, hash, hash_len);
+	if (res) {
+		rk_hash_final(hash_hdl, NULL);
+		goto exit;
+	}
+
+	res = rk_hash_update_virt(hash_hdl, salt, slen);
+	if (res) {
+		rk_hash_final(hash_hdl, NULL);
+		goto exit;
+	}
+
+	res = rk_hash_final(hash_hdl, p);
+	if (res)
+		goto exit;
+
+	/* Compensate for boundary condition when applying mask */
+	if (msb % 8 == 0)
+		offset = 1;
+
+	/* maskedDB: Apply dbMask to DB */
+	res = mgf_mask(out + offset, olen - hlen - 1 - offset, p, hlen, hash_algo, hash_len);
+	if (res)
+		goto exit;
+
+	msb = n_bits - 1;
+	out[0] &= 0xFF >> (olen * 8 - msb);
+
+	p += hlen;
+	*p++ = 0xBC;
+
+exit:
+	return res ? RK_CRYPTO_ERR_PADDING : RK_CRYPTO_SUCCESS;
+}
+
+/*
+ * Implementation of the PKCS#1 v2.1 RSASSA-PSS-VERIFY function
+ */
+RK_RES rk_rsa_padding_check_pss_type(uint16_t key_len, uint16_t n_bits,
+				     uint32_t hash_algo, uint32_t hash_len,
+				     const uint8_t *hash, const uint8_t *dec)
+{
+	RK_RES res = RK_CRYPTO_ERR_PADDING;
+	uint32_t siglen;
+	uint8_t *p;
+	uint8_t *buf = NULL;
+	uint8_t result[SHA512_HASH_SIZE];
+	uint8_t zeros[8];
+	uint32_t hlen;
+	uint32_t slen, msb;
+	rk_hash_config hash_cfg;
+	rk_handle hash_hdl;
+
+	buf = malloc(key_len);
+	if (!buf)
+		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
+
+	memcpy(buf, dec, key_len);
+
+	siglen = key_len;
+
+	if (siglen < 16)
+		goto error;
+
+	p = buf;
+
+	if (buf[siglen - 1] != 0xBC)
+		goto error;
+
+	hlen = hash_len;
+	slen = siglen - hlen - 1; /* Currently length of salt + padding */
+
+	memset(zeros, 0, 8);
+
+	/*
+	 * Note: EMSA-PSS verification is over the length of N - 1 bits
+	 */
+	msb = n_bits - 1;
+
+	/* Compensate for boundary condition when applying mask */
+	if (msb % 8 == 0) {
+		p++;
+		siglen -= 1;
+	}
+	if (buf[0] >> (8 - siglen * 8 + msb))
+		goto error;
+
+	res = mgf_mask(p, siglen - hlen - 1, p + siglen - hlen - 1, hlen, hash_algo, hash_len);
+	if (res)
+		goto error;
+
+	buf[0] &= 0xFF >> (siglen * 8 - msb);
+
+	while (p < buf + siglen && *p == 0)
+		p++;
+
+	if (p == buf + siglen || *p++ != 0x01)
+		goto error;
+
+	/* Actual salt len */
+	slen -= p - buf;
+
+	/*
+	 * Generate H = Hash( M' )
+	 */
+
+	memset(&hash_cfg, 0x00, sizeof(hash_cfg));
+	hash_cfg.algo = hash_algo;
+
+	res = rk_hash_init(&hash_cfg, &hash_hdl);
+	if (res)
+		goto error;
+
+	res = rk_hash_update_virt(hash_hdl, zeros, 8);
+	if (res) {
+		rk_hash_final(hash_hdl, NULL);
+		goto error;
+	}
+
+	res = rk_hash_update_virt(hash_hdl, hash, hash_len);
+	if (res) {
+		rk_hash_final(hash_hdl, NULL);
+		goto error;
+	}
+
+	res = rk_hash_update_virt(hash_hdl, p, slen);
+	if (res) {
+		rk_hash_final(hash_hdl, NULL);
+		goto error;
+	}
+
+	res = rk_hash_final(hash_hdl, result);
+	if (res)
+		goto error;
+
+	free(buf);
+
+	if (memcmp(p + slen, result, hlen) == 0)
+		return RK_CRYPTO_SUCCESS;
+	else
+		return RK_CRYPTO_ERR_VERIFY;
+
+error:
+	if (buf)
+		free(buf);
+
+	return RK_CRYPTO_ERR_PADDING;
 }
 
 RK_RES rk_rsa_pubkey_encode(rk_rsa_pub_key_pack *pub,
@@ -945,20 +1299,42 @@ RK_RES rk_rsa_crypt_undo_padding(enum RK_RSA_CRYPT_PADDING padding,
 	return res;
 }
 
-RK_RES rk_rsa_sign_do_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len,
-			      const uint8_t *data, uint32_t data_len,
+RK_RES rk_rsa_sign_do_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len, uint16_t n_bits,
+			      const uint8_t *data, uint32_t data_len, const uint8_t *hash,
 			      uint8_t *pad, uint32_t *pad_len)
 {
 	RK_RES res = RK_CRYPTO_SUCCESS;
+	uint32_t hash_len, hash_algo;
+	uint8_t tmp_hash[SHA512_HASH_SIZE];
+
+	res = get_hash_algo_from_padding(padding, &hash_len, &hash_algo);
+	if (res)
+		return res;
+
+	memset(tmp_hash, 0x00, sizeof(tmp_hash));
+
+	if (hash) {
+		memcpy(tmp_hash, hash, hash_len);
+	} else {
+		res = calc_padding_digest(hash_algo, data, data_len, tmp_hash);
+		if (res)
+			return RK_CRYPTO_ERR_PADDING;
+	}
 
 	switch (padding) {
-	case RK_RSA_SIGN_PADDING_NONE:
-		if (data_len != key_len) {
-			D_TRACE("length not match %u != %u", data_len, key_len);
-			return RK_CRYPTO_ERR_PARAMETER;
-		}
-
-		memcpy(pad, data, data_len);
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA1:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA224:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA256:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA384:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA512:
+		res = rsa_padding_add_pkcs15_sign_type(hash_algo, key_len, tmp_hash, hash_len, pad);
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA1:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA224:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA256:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA384:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA512:
+		res = rsa_padding_add_pss_type(key_len, n_bits, hash_algo, tmp_hash, hash_len, pad);
 		break;
 	default:
 		D_TRACE("unknown padding %d", padding);
@@ -971,20 +1347,56 @@ RK_RES rk_rsa_sign_do_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len
 	return res;
 }
 
-RK_RES rk_rsa_sign_undo_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len,
-				const uint8_t *pad, uint32_t pad_len,
-				uint8_t *data, uint32_t *data_len)
+RK_RES rk_rsa_sign_undo_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len, uint16_t n_bits,
+				const uint8_t *data, uint32_t data_len,
+				const uint8_t *hash, const uint8_t *dec)
 {
 	RK_RES res = RK_CRYPTO_SUCCESS;
+	uint32_t hash_len, hash_algo;
+	uint8_t tmp_hash[SHA512_HASH_SIZE];
+	uint8_t *pad = NULL;
+
+	res = get_hash_algo_from_padding(padding, &hash_len, &hash_algo);
+	if (res)
+		return res;
+
+	memset(tmp_hash, 0x00, sizeof(tmp_hash));
+
+	if (hash) {
+		memcpy(tmp_hash, hash, hash_len);
+	} else {
+		res = calc_padding_digest(hash_algo, data, data_len, tmp_hash);
+		if (res)
+			return RK_CRYPTO_ERR_PADDING;
+	}
+
+	pad = malloc(key_len);
+	if (!pad)
+		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
 
 	switch (padding) {
-	case RK_RSA_SIGN_PADDING_NONE:
-		if (pad_len != key_len) {
-			D_TRACE("length not match %u != %u", pad_len, key_len);
-			return RK_CRYPTO_ERR_PARAMETER;
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA1:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA224:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA256:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA384:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA512:
+		res = rsa_padding_add_pkcs15_sign_type(hash_algo, key_len, tmp_hash, hash_len, pad);
+		if (res) {
+			D_TRACE("check pkcs V1.5 error.");
+			goto exit;
 		}
 
-		memcpy(data, pad, pad_len);
+		if (memcmp(pad, dec, key_len))
+			res = RK_CRYPTO_ERR_VERIFY;
+
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA1:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA224:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA256:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA384:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA512:
+		res = rk_rsa_padding_check_pss_type(key_len, n_bits, hash_algo,
+						    hash_len, tmp_hash, dec);
 		break;
 	default:
 		D_TRACE("unknown padding %d", padding);
@@ -992,7 +1404,9 @@ RK_RES rk_rsa_sign_undo_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_l
 		break;
 	}
 
-	*data_len = key_len;
+exit:
+	if (pad)
+		free(pad);
 
 	return res;
 }
