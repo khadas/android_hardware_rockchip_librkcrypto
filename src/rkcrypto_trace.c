@@ -24,7 +24,7 @@ static void rkcrypto_get_trace_level(void)
 {
 	char pick_value;
 
-	if (trace_level >=TRACE_ERROR && trace_level <= TRACE_VERBOSE)
+	if (trace_level >= TRACE_ERROR && trace_level <= TRACE_VERBOSE)
 		return;
 
 #ifdef ANDROID
@@ -33,7 +33,7 @@ static void rkcrypto_get_trace_level(void)
 	if (property_get(RKCRYPTO_TRACE_LEVEL_NAME, property_value, NULL) > 0)
 		pick_value = property_value[0];
 #else
-	char* env_value = getenv(RKCRYPTO_TRACE_LEVEL_NAME);
+	char *env_value = getenv(RKCRYPTO_TRACE_LEVEL_NAME);
 	if (env_value)
 		pick_value = env_value[0];
 #endif
@@ -102,7 +102,7 @@ void trace_printf(int level, const char *function, int line, const char *fmt, ..
 		}
 
 		sprintf(head, "%s: [%s, %d]", RKCRYPTO_LOG_TAG, function, line);
-		vsprintf (buffer, fmt, args);
+		vsprintf(buffer, fmt, args);
 
 		if (buffer[0] != '\0') {
 			for (i = strlen(buffer) - 1; i >= 0; i--) {
@@ -135,7 +135,7 @@ void trace_printf(int level, const char *function, int line, const char *fmt, ..
 		}
 
 		printf("%c %s: [%s, %d]: ", linux_prio, RKCRYPTO_LOG_TAG, function, line);
-		vsprintf (buffer, fmt, args);
+		vsprintf(buffer, fmt, args);
 
 		if (buffer[0] != '\0') {
 			for (i = strlen(buffer) - 1; i >= 0; i--) {
@@ -153,14 +153,14 @@ void trace_printf(int level, const char *function, int line, const char *fmt, ..
 	}
 }
 
-void hex_dump(int level, const char *function, int line, const void *buffer, int len,
-	      const char *fmt, ...)
+void hex_dump(int level, const char *function, int line, const char *buffer_name,
+	      const void *buffer, int len)
 {
 	int i, j, line_count;
 	char ch[4], tmp[64];
 	char *in = (char *)buffer;
 
-	trace_printf(level, function, line, fmt);
+	trace_printf(level, function, line, "%s(%d): ", buffer_name, len);
 
 	if (level > trace_level) {
 		return;

@@ -17,8 +17,8 @@ enum RKCRYPTO_TRACE_LEVEL {
 };
 
 void trace_printf(int level, const char *function, int line, const char *fmt, ...);
-void hex_dump(int level, const char *function, int line, const void *buffer, int len, const char *fmt, ...);
-
+void hex_dump(int level, const char *function, int line, const char *buffer_name,
+	      const void *buffer, int len);
 #define V_TRACE(...) \
 	trace_printf(TRACE_VERBOSE, __func__, __LINE__, __VA_ARGS__)
 
@@ -31,8 +31,8 @@ void hex_dump(int level, const char *function, int line, const void *buffer, int
 #define E_TRACE(...) \
 	trace_printf(TRACE_ERROR, __func__, __LINE__, __VA_ARGS__)
 
-#define VHEX_DUMP(data, len, fmt, ...) \
-	hex_dump(TRACE_VERBOSE, __func__, __LINE__, buffer, len, fmt, __VA_ARGS__)
+#define VHEX_DUMP(buffer_name, buffer, len) \
+	hex_dump(TRACE_VERBOSE, __func__, __LINE__, buffer_name, buffer, len)
 
 #define RK_CRYPTO_CHECK_PARAM(_val)\
 	do {\
