@@ -215,6 +215,431 @@ static const struct test_rsa_item test_rsa_tbl[] = {
 	TEST_RSA_SIGN(test_rsa_sign,	  PKCS1_PSS_SHA512, no_padding_data),
 };
 
+#ifdef RSA_OPENSSL_COMPRAE
+#include <openssl/rsa.h>
+#include <openssl/bn.h>
+#include <openssl/rand.h>
+#include <openssl/evp.h>
+#include <openssl/ec_key.h>
+#include <openssl/base.h>
+#include <openssl/sha.h>
+#include <openssl/err.h>
+
+static RK_RES rk2ssl_padding(uint32_t rk_padding, int *ssl_padding, const EVP_MD **digest_md)
+{
+	switch (rk_padding) {
+	/* crypt padding */
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA1:
+		*ssl_padding = RSA_PKCS1_OAEP_PADDING;
+		*digest_md   = EVP_sha1();
+		break;
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA224:
+		*ssl_padding = RSA_PKCS1_OAEP_PADDING;
+		*digest_md   = EVP_sha224();
+		break;
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA256:
+		*ssl_padding = RSA_PKCS1_OAEP_PADDING;
+		*digest_md   = EVP_sha256();
+		break;
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA384:
+		*ssl_padding = RSA_PKCS1_OAEP_PADDING;
+		*digest_md   = EVP_sha384();
+		break;
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA512:
+		*ssl_padding = RSA_PKCS1_OAEP_PADDING;
+		*digest_md   = EVP_sha512();
+		break;
+	case RK_RSA_CRYPT_PADDING_PKCS1_V1_5:
+		*ssl_padding = RSA_PKCS1_PADDING;
+		*digest_md   = NULL;
+		break;
+
+	/* sign padding */
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA1:
+		*ssl_padding = RSA_PKCS1_PADDING;
+		*digest_md   = EVP_sha1();
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA224:
+		*ssl_padding = RSA_PKCS1_PADDING;
+		*digest_md   = EVP_sha224();
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA256:
+		*ssl_padding = RSA_PKCS1_PADDING;
+		*digest_md   = EVP_sha256();
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA384:
+		*ssl_padding = RSA_PKCS1_PADDING;
+		*digest_md   = EVP_sha384();
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA512:
+		*ssl_padding = RSA_PKCS1_PADDING;
+		*digest_md   = EVP_sha512();
+		break;
+
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA1:
+		*ssl_padding = RSA_PKCS1_PSS_PADDING;
+		*digest_md   = EVP_sha1();
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA224:
+		*ssl_padding = RSA_PKCS1_PSS_PADDING;
+		*digest_md   = EVP_sha224();
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA256:
+		*ssl_padding = RSA_PKCS1_PSS_PADDING;
+		*digest_md   = EVP_sha256();
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA384:
+		*ssl_padding = RSA_PKCS1_PSS_PADDING;
+		*digest_md   = EVP_sha384();
+		break;
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA512:
+		*ssl_padding = RSA_PKCS1_PSS_PADDING;
+		*digest_md   = EVP_sha512();
+		break;
+
+	default:
+		return RK_CRYPTO_ERR_PARAMETER;
+	}
+
+	return RK_CRYPTO_SUCCESS;
+}
+
+static void openssl_dump_last_error(void)
+{
+	ERR_load_ERR_strings();
+	ERR_load_crypto_strings();
+	unsigned long ulErr = ERR_get_error();
+	char szErrMsg[512] = {0};
+	char *pTmp = NULL;
+
+	pTmp = ERR_error_string(ulErr, szErrMsg);
+	printf("%s\n", pTmp);
+}
+
+static EVP_PKEY *openssl_alloc_evpkey(rk_rsa_priv_key_pack *priv)
+{
+	BIGNUM *be = NULL;
+	BIGNUM *bn = NULL;
+	BIGNUM *bd = NULL;
+	RSA *rsa_key = NULL;
+	EVP_PKEY *evp_key = NULL;
+
+	be = BN_new();
+	if (!be)
+		goto error;
+
+	bd = BN_new();
+	if (!bd)
+		goto error;
+
+	bn = BN_new();
+	if (!bn)
+		goto error;
+
+	rsa_key = RSA_new();
+	if (!rsa_key)
+		goto error;
+
+	BN_bin2bn(priv->key.n, priv->key.n_len, bn);
+	BN_bin2bn(priv->key.e, priv->key.e_len, be);
+	BN_bin2bn(priv->key.d, priv->key.d_len, bd);
+
+	rsa_key->e = be;
+	rsa_key->d = bd;
+	rsa_key->n = bn;
+
+	evp_key = EVP_PKEY_new();
+	if (!evp_key) {
+		printf("EVP_PKEY_new failed!\n");
+		goto error;
+	}
+
+	if (EVP_PKEY_set1_RSA(evp_key, rsa_key) != 1) {
+		printf("EVP_PKEY_set1_RSA err\n");
+		goto error;
+	}
+
+	return evp_key;
+error:
+	if (be)
+		BN_free(be);
+	if (bn)
+		BN_free(bn);
+	if (bd)
+		BN_free(bd);
+
+	rsa_key->e = NULL;
+	rsa_key->d = NULL;
+	rsa_key->n = NULL;
+
+	if (evp_key)
+		EVP_PKEY_free(evp_key);
+
+	return NULL;
+}
+
+static void openssl_free_evpkey(EVP_PKEY *evp_key)
+{
+	if (evp_key)
+		EVP_PKEY_free(evp_key);
+}
+
+static RK_RES openssl_encrypt(const uint8_t *in, uint32_t in_len, uint8_t *out, size_t *out_len,
+			      int padding, const EVP_MD *digest_algorithm,
+			      rk_rsa_priv_key_pack *priv)
+{
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+	EVP_PKEY *evp_key = NULL;
+	EVP_PKEY_CTX *pkey_ctx = NULL;
+
+	evp_key = openssl_alloc_evpkey(priv);
+	if (!evp_key)
+		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
+
+	pkey_ctx = EVP_PKEY_CTX_new(evp_key, NULL /* engine */);
+	if (!pkey_ctx) {
+		printf("EVP_PKEY_CTX_new err\n");
+		return RK_CRYPTO_ERR_GENERIC;
+	}
+
+	if (EVP_PKEY_encrypt_init(pkey_ctx) <= 0) {
+		printf("EVP_PKEY_encrypt_init err\n");
+		goto exit;
+	}
+
+	if (EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, padding) <= 0) {
+		printf("EVP_PKEY_CTX_set_rsa_padding err\n");
+		goto exit;
+	}
+
+	if (padding == RSA_PKCS1_OAEP_PADDING) {
+		if (!EVP_PKEY_CTX_set_rsa_oaep_md(pkey_ctx, digest_algorithm)) {
+			printf("EVP_PKEY_CTX_set_rsa_oaep_md err\n");
+			goto exit;
+		}
+
+		if (!EVP_PKEY_CTX_set_rsa_mgf1_md(pkey_ctx, digest_algorithm)) {
+			printf("EVP_PKEY_CTX_set_rsa_mgf1_md err\n");
+			goto exit;
+		}
+	}
+
+	if (EVP_PKEY_encrypt(pkey_ctx, NULL /* out */, out_len, in, in_len) <= 0) {
+		printf("EVP_PKEY_encrypt err\n");
+		goto exit;
+	}
+	if (EVP_PKEY_encrypt(pkey_ctx, out, out_len, in, in_len) <= 0) {
+		printf("EVP_PKEY_encrypt err\n");
+		goto exit;
+	}
+
+	res = RK_CRYPTO_SUCCESS;
+exit:
+	if (res)
+		openssl_dump_last_error();
+
+	EVP_PKEY_CTX_free(pkey_ctx);
+	openssl_free_evpkey(evp_key);
+
+	return res;
+}
+
+static RK_RES openssl_decrypt(const uint8_t *in, uint32_t in_len, uint8_t *out, size_t *out_len,
+			      int padding, const EVP_MD *digest_algorithm,
+			      rk_rsa_priv_key_pack *priv)
+{
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+	EVP_PKEY *evp_key = NULL;
+	EVP_PKEY_CTX *pkey_ctx = NULL;
+
+	evp_key = openssl_alloc_evpkey(priv);
+	if (!evp_key) {
+		printf("openssl_alloc_evpkey err\n");
+		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
+	}
+
+	pkey_ctx = EVP_PKEY_CTX_new(evp_key, NULL /* engine */);
+	if (!pkey_ctx) {
+		printf("EVP_PKEY_CTX_new err\n");
+		return RK_CRYPTO_ERR_GENERIC;
+	}
+
+	if (EVP_PKEY_decrypt_init(pkey_ctx) <= 0) {
+		printf("EVP_PKEY_encrypt_init err\n");
+		goto exit;
+	}
+
+	if (EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, padding) <= 0) {
+		printf("EVP_PKEY_CTX_set_rsa_padding err\n");
+		goto exit;
+	}
+
+	if (padding == RSA_PKCS1_OAEP_PADDING) {
+		if (!EVP_PKEY_CTX_set_rsa_oaep_md(pkey_ctx, digest_algorithm)) {
+			printf("EVP_PKEY_CTX_set_rsa_oaep_md err\n");
+			goto exit;
+		}
+
+		if (!EVP_PKEY_CTX_set_rsa_mgf1_md(pkey_ctx, digest_algorithm)) {
+			printf("EVP_PKEY_CTX_set_rsa_mgf1_md err\n");
+			goto exit;
+		}
+	}
+
+	if (EVP_PKEY_decrypt(pkey_ctx, NULL /* out */, out_len, in, in_len) <= 0) {
+		printf("EVP_PKEY_decrypt err\n");
+		goto exit;
+	}
+	if (EVP_PKEY_decrypt(pkey_ctx, out, out_len, in, in_len) <= 0) {
+		printf("EVP_PKEY_decrypt err\n");
+		goto exit;
+	}
+
+	res = RK_CRYPTO_SUCCESS;
+exit:
+	if (res)
+		openssl_dump_last_error();
+
+	EVP_PKEY_CTX_free(pkey_ctx);
+	openssl_free_evpkey(evp_key);
+
+	return res;
+}
+
+static RK_RES openssl_sign(const uint8_t *in, uint32_t in_len, uint8_t *out, size_t *out_len,
+			int padding, const EVP_MD *digest_algorithm, rk_rsa_priv_key_pack *priv)
+{
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+	EVP_PKEY_CTX *pkey_ctx;
+	EVP_PKEY *evp_key = NULL;
+	EVP_MD_CTX *digest_ctx = NULL;
+
+	digest_ctx = EVP_MD_CTX_new();
+	if (!digest_ctx) {
+		res = RK_CRYPTO_ERR_OUT_OF_MEMORY;
+		goto exit;
+	}
+
+	evp_key = openssl_alloc_evpkey(priv);
+	if (!evp_key) {
+		printf("openssl_alloc_evpkey err\n");
+		res = RK_CRYPTO_ERR_OUT_OF_MEMORY;
+		goto exit;
+	}
+
+	if (EVP_DigestSignInit(digest_ctx, &pkey_ctx, digest_algorithm,
+			       NULL /* engine */, evp_key) != 1) {
+		printf("EVP_DigestSignInit err\n");
+		goto exit;
+	}
+
+	if (EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, padding) <= 0) {
+		printf("EVP_PKEY_CTX_set_rsa_padding err\n");
+		goto exit;
+	}
+
+	if (padding == RSA_PKCS1_PSS_PADDING) {
+		uint32_t saltlen = EVP_MD_size(digest_algorithm);
+
+		if (EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, saltlen) <= 0) {
+			printf("EVP_PKEY_CTX_set_rsa_pss_saltlen err\n");
+			goto exit;
+		}
+	}
+
+	if (EVP_DigestSignUpdate(digest_ctx, in, in_len) != 1) {
+		printf("EVP_DigestSignUpdate err\n");
+		goto exit;
+	}
+	if (EVP_DigestSignFinal(digest_ctx, NULL, out_len) != 1) {
+		printf("EVP_DigestSignFinal err\n");
+		goto exit;
+	}
+	if (EVP_DigestSignFinal(digest_ctx, out, out_len) <= 0) {
+		printf("EVP_DigestSignFinal err\n");
+		goto exit;
+	}
+
+	res = RK_CRYPTO_SUCCESS;
+exit:
+	if (res)
+		openssl_dump_last_error();
+
+	if (digest_ctx)
+		EVP_MD_CTX_free(digest_ctx);
+
+	openssl_free_evpkey(evp_key);
+
+	return res;
+
+}
+
+static RK_RES openssl_verify(const uint8_t *in, uint32_t in_len, uint8_t *sign, uint32_t sign_len,
+			  int padding, const EVP_MD *digest_algorithm, rk_rsa_priv_key_pack *priv)
+{
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+	EVP_PKEY_CTX *pkey_ctx;
+	EVP_PKEY *evp_key = NULL;
+	EVP_MD_CTX *digest_ctx = NULL;
+
+	digest_ctx = EVP_MD_CTX_new();
+	if (!digest_ctx) {
+		res = RK_CRYPTO_ERR_OUT_OF_MEMORY;
+		goto exit;
+	}
+
+	evp_key = openssl_alloc_evpkey(priv);
+	if (!evp_key) {
+		printf("openssl_alloc_evpkey err\n");
+		res = RK_CRYPTO_ERR_OUT_OF_MEMORY;
+		goto exit;
+	}
+
+	if (EVP_DigestVerifyInit(digest_ctx, &pkey_ctx, digest_algorithm,
+			       NULL /* engine */, evp_key) != 1) {
+		printf("EVP_DigestVerifyInit err\n");
+		goto exit;
+	}
+
+	if (EVP_PKEY_CTX_set_rsa_padding(pkey_ctx, padding) <= 0) {
+		printf("EVP_PKEY_CTX_set_rsa_padding err\n");
+		goto exit;
+	}
+
+	if (padding == RSA_PKCS1_PSS_PADDING) {
+		uint32_t saltlen = EVP_MD_size(digest_algorithm);
+
+		if (EVP_PKEY_CTX_set_rsa_pss_saltlen(pkey_ctx, saltlen) <= 0) {
+			printf("EVP_PKEY_CTX_set_rsa_pss_saltlen err\n");
+			goto exit;
+		}
+	}
+
+	if (EVP_DigestVerifyUpdate(digest_ctx, in, in_len) != 1) {
+		printf("EVP_DigestVerifyUpdate err\n");
+		goto exit;
+	}
+
+	if (!EVP_DigestVerifyFinal(digest_ctx, sign, sign_len)) {
+		printf("EVP_DigestVerifyFinal err\n");
+		goto exit;
+	}
+
+	res = RK_CRYPTO_SUCCESS;
+exit:
+	if (res)
+		openssl_dump_last_error();
+
+	if (digest_ctx)
+		EVP_MD_CTX_free(digest_ctx);
+
+	openssl_free_evpkey(evp_key);
+
+	return res;
+}
+
+#endif
+
 static void test_init_pubkey(rk_rsa_pub_key_pack *pub)
 {
 	memset(pub, 0x00, sizeof(*pub));
@@ -297,6 +722,32 @@ static RK_RES test_rsa_pub_enc(uint32_t padding, const char *padding_name,
 		}
 	}
 
+#ifdef RSA_OPENSSL_COMPRAE
+	int ssl_padding;
+	const EVP_MD *digest_md;
+
+	if (rk2ssl_padding(padding, &ssl_padding, &digest_md) == RK_CRYPTO_SUCCESS) {
+		res = openssl_decrypt(enc_buf, out_len, dec_buf, &out_len,
+				      ssl_padding, digest_md, &priv_key);
+		if (res) {
+			printf("openssl_decrypt error!\n");
+			goto exit;
+		}
+
+		if (out_len != in_len || memcmp(in, dec_buf, in_len)) {
+			printf("rk_rsa_pub_encrypt not match openssl_decrypt\n");
+			test_dump_hex("result", dec_buf, out_len);
+			test_dump_hex("expect", in, in_len);
+		}
+
+		res = openssl_encrypt(in, in_len, enc_buf, &out_len,
+				      ssl_padding, digest_md, &priv_key);
+		if (res) {
+			printf("openssl_encrypt error!\n");
+			goto exit;
+		}
+	}
+#endif
 	res = rk_rsa_priv_decrypt(&priv_key, padding, enc_buf, out_len, dec_buf, &out_len);
 	if (res) {
 		printf("rk_rsa_priv_decrypt failed %x\n", res);
@@ -433,6 +884,26 @@ static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
 			goto exit;
 		}
 	}
+
+#ifdef RSA_OPENSSL_COMPRAE
+	int ssl_padding;
+	const EVP_MD *digest_md;
+
+	if (rk2ssl_padding(padding, &ssl_padding, &digest_md) == RK_CRYPTO_SUCCESS) {
+		res = openssl_verify(in, in_len, sign, sign_len, ssl_padding, digest_md, &priv_key);
+		if (res) {
+			printf("openssl_verify error!\n");
+			goto exit;
+		}
+
+		res = openssl_sign(in, in_len, sign, &sign_len,
+			ssl_padding, digest_md, &priv_key);
+		if (res) {
+			printf("openssl_sign error!\n");
+			goto exit;
+		}
+	}
+#endif
 
 	res = rk_rsa_verify(&pub_key, padding, in, in_len, NULL, sign, sign_len);
 	if (res) {
