@@ -456,6 +456,346 @@ out:
 	return res;
 }
 
+static int test_ae_item_tp(bool is_virt, uint32_t key_len, uint32_t algo,
+			   uint32_t mode, void *in, void *out, uint32_t data_len,
+			   void *aad, uint32_t aad_len, void *tag)
+{
+	uint32_t res = 0;
+	rk_handle handle = 0;
+	rk_ae_config config;
+	struct timespec start, end;
+	uint64_t total_nsec, nsec;
+	uint32_t rounds;
+	uint8_t iv_tmp[32];
+
+	nsec = DURATION * 1000000000;
+
+	test_get_rng(config.iv, sizeof(config.iv));
+	test_get_rng(config.key, key_len);
+
+	memcpy(iv_tmp, config.iv, sizeof(config.iv));
+
+	if (is_virt) {
+		test_get_rng(in, data_len);
+		test_get_rng(aad, aad_len);
+	} else {
+		test_get_rng(((rk_crypto_mem *)in)->vaddr, data_len);
+		test_get_rng(((rk_crypto_mem *)aad)->vaddr, aad_len);
+	}
+
+	config.algo      = algo;
+	config.mode      = mode;
+	config.key_len   = key_len;
+	config.reserved  = NULL;
+	config.aad_len   = aad_len;
+	config.iv_len    = 12;
+	config.tag_len   = 16;
+
+	/* ENC */
+	config.operation = RK_OP_CIPHER_ENC;
+	total_nsec = 0;
+	rounds = 0;
+
+	while (total_nsec < nsec) {
+		clock_gettime(CLOCK_REALTIME, &start);
+
+		res = rk_ae_init(&config, &handle);
+		if (res) {
+			if (res != RK_CRYPTO_ERR_NOT_SUPPORTED) {
+				printf("test rk_ae_init failed! 0x%08x\n", res);
+				goto error;
+			}
+
+			if (is_virt)
+				printf("virt:\t[%s-%u]\t%s\tN/A\n",
+				       test_algo_name(algo), key_len * 8, test_mode_name(mode));
+			else
+				printf("dma_fd:\t[%s-%u]\t%s\tN/A\n",
+				       test_algo_name(algo), key_len * 8, test_mode_name(mode));
+			return 0;
+		}
+
+		if (is_virt) {
+			res = rk_ae_set_aad_virt(handle, aad);
+			if (res) {
+				rk_ae_final(handle);
+				goto error;
+			}
+			res = rk_ae_crypt_virt(handle, in, out, data_len, tag);
+		} else {
+			res = rk_ae_set_aad(handle, ((rk_crypto_mem *)aad)->dma_fd);
+			if (res) {
+				rk_ae_final(handle);
+				goto error;
+			}
+
+			res = rk_ae_crypt(handle,
+					  ((rk_crypto_mem *)in)->dma_fd,
+					  ((rk_crypto_mem *)out)->dma_fd,
+					  data_len,
+					  tag);
+		}
+
+		if (res) {
+			rk_ae_final(handle);
+			printf("test rk_ad_crypt failed! 0x%08x\n", res);
+			goto error;
+		}
+
+		rk_ae_final(handle);
+
+		clock_gettime(CLOCK_REALTIME, &end);
+		total_nsec += (end.tv_sec - start.tv_sec) * 1000000000 +
+			      (end.tv_nsec - start.tv_nsec);
+		rounds ++;
+	}
+
+	if (is_virt)
+		printf("virt:\t[%s-%u]\t%s\t%s\t%dMB/s.\n",
+		       test_algo_name(algo), key_len * 8, test_mode_name(mode),
+		       test_op_name(config.operation), (data_len * rounds / (1024 * 1024)));
+	else
+		printf("dma_fd:\t[%s-%u]\t%s\t%s\t%dMB/s.\n",
+		       test_algo_name(algo), key_len * 8, test_mode_name(mode),
+		       test_op_name(config.operation), (data_len * rounds / (1024 * 1024)));
+
+	/* DEC */
+	config.operation = RK_OP_CIPHER_DEC;
+	memcpy(config.iv, iv_tmp, config.iv_len);
+	total_nsec = 0;
+	rounds = 0;
+	while (total_nsec < nsec) {
+		clock_gettime(CLOCK_REALTIME, &start);
+
+		res = rk_ae_init(&config, &handle);
+		if (res) {
+			if (res != RK_CRYPTO_ERR_NOT_SUPPORTED) {
+				printf("test rk_ae_init failed! 0x%08x\n", res);
+				goto error;
+			}
+
+			if (is_virt)
+				printf("virt:\t[%s-%u]\t%s\tN/A\n",
+				       test_algo_name(algo), key_len * 8, test_mode_name(mode));
+			else
+				printf("dma_fd:\t[%s-%u]\t%s\tN/A\n",
+				       test_algo_name(algo), key_len * 8, test_mode_name(mode));
+			return 0;
+		}
+
+		if (is_virt) {
+			res = rk_ae_set_aad_virt(handle, aad);
+			if (res) {
+				rk_ae_final(handle);
+				goto error;
+			}
+			res = rk_ae_crypt_virt(handle, out, in, data_len, tag);
+		} else {
+			res = rk_ae_set_aad(handle, ((rk_crypto_mem *)aad)->dma_fd);
+			if (res) {
+				rk_ae_final(handle);
+				goto error;
+			}
+
+			res = rk_ae_crypt(handle,
+					  ((rk_crypto_mem *)out)->dma_fd,
+					  ((rk_crypto_mem *)in)->dma_fd,
+					  data_len,
+					  tag);
+		}
+
+		if (res) {
+			rk_ae_final(handle);
+			printf("test rk_ad_crypt failed! 0x%08x\n", res);
+			goto error;
+		}
+
+		rk_ae_final(handle);
+
+		clock_gettime(CLOCK_REALTIME, &end);
+		total_nsec += (end.tv_sec - start.tv_sec) * 1000000000 +
+			      (end.tv_nsec - start.tv_nsec);
+		rounds ++;
+	}
+
+	if (is_virt)
+		printf("virt:\t[%s-%u]\t%s\t%s\t%dMB/s.\n",
+		       test_algo_name(algo), key_len * 8, test_mode_name(mode),
+		       test_op_name(config.operation), (data_len * rounds / (1024 * 1024)));
+	else
+		printf("dma_fd:\t[%s-%u]\t%s\t%s\t%dMB/s.\n",
+		       test_algo_name(algo), key_len * 8, test_mode_name(mode),
+		       test_op_name(config.operation), (data_len * rounds / (1024 * 1024)));
+
+	return res;
+error:
+	if (is_virt)
+		printf("virt:\t[%s-%u]\t%s\tFailed.\n",
+		       test_algo_name(algo), key_len * 8, test_mode_name(mode));
+	else
+		printf("dma_fd:\t[%s-%u]\t%s\tFailed.\n",
+		       test_algo_name(algo), key_len * 8, test_mode_name(mode));
+	return res;
+}
+
+static int test_ae_tp(void)
+{
+	int res = 0;
+	uint32_t h, j;
+	uint32_t algo, mode, len, key_len, aad_len;
+	rk_crypto_mem *in_fd = NULL, *out_fd = NULL, *aad_fd = NULL;
+	uint8_t *in_virt = NULL, *out_virt = NULL, *aad_virt = NULL;
+	size_t page_size = getpagesize();
+	uint32_t aad_buff_len = 1024;
+	uint8_t tag[16];
+
+	struct test_aead_item_tp {
+		uint32_t algo;
+		uint32_t modes[RK_CIPHER_MODE_MAX];
+		uint32_t key_len;
+		uint32_t aad_len;
+		uint32_t len;
+	};
+
+	static struct test_aead_item_tp test_item_tbl[] = {
+		{
+			.algo  = RK_ALGO_AES,
+			.modes = {
+				RK_CIPHER_MODE_GCM,
+				DATA_BUTT,
+			},
+			.key_len = 32,
+			.aad_len = 1024,
+			.len     = TEST_BLOCK_SIZE,
+		},
+
+		{
+			.algo  = RK_ALGO_SM4,
+			.modes = {
+				RK_CIPHER_MODE_GCM,
+				DATA_BUTT,
+			},
+			.key_len = 16,
+			.aad_len = 1024,
+			.len     = TEST_BLOCK_SIZE,
+		},
+	};
+
+	if (rk_crypto_init()) {
+		printf("rk_crypto_init error!\n");
+		return -1;
+	}
+
+	in_fd = rk_crypto_mem_alloc(TEST_BLOCK_SIZE);
+	if (!in_fd) {
+		printf("rk_crypto_mem_alloc %uByte error!\n", TEST_BLOCK_SIZE);
+		res = -1;
+		goto out;
+	}
+
+	out_fd = rk_crypto_mem_alloc(TEST_BLOCK_SIZE);
+	if (!out_fd) {
+		printf("rk_crypto_mem_alloc %uByte error!\n", TEST_BLOCK_SIZE);
+		res = -1;
+		goto out;
+	}
+
+	aad_fd = rk_crypto_mem_alloc(aad_buff_len);
+	if (!aad_fd) {
+		printf("rk_crypto_mem_alloc %uByte error!\n", aad_buff_len);
+		res = -1;
+		goto out;
+	}
+
+	if (posix_memalign((void *)&in_virt, page_size, TEST_BLOCK_SIZE) || !in_virt) {
+		printf("malloc %uByte error!\n", TEST_BLOCK_SIZE);
+		res = -1;
+		goto out;
+	}
+
+	if (posix_memalign((void *)&out_virt, page_size, TEST_BLOCK_SIZE) || !out_virt) {
+		printf("malloc %uByte error!\n", TEST_BLOCK_SIZE);
+		res = -1;
+		goto out;
+	}
+
+	if (posix_memalign((void *)&aad_virt, page_size, aad_buff_len) || !aad_virt) {
+		printf("malloc %uByte error!\n", aad_buff_len);
+		res = -1;
+		goto out;
+	}
+
+	/* Test dma_fd cipher */
+	for (h = 0; h < ARRAY_SIZE(test_item_tbl); h++) {
+		for (j = 0; j < ARRAY_SIZE(test_item_tbl[h].modes); j++) {
+			if (test_item_tbl[h].modes[j] == DATA_BUTT)
+				break;
+
+			algo      = test_item_tbl[h].algo;
+			key_len   = test_item_tbl[h].key_len;
+			mode      = test_item_tbl[h].modes[j];
+			aad_len   = test_item_tbl[h].aad_len;
+			len       = test_item_tbl[h].len;
+
+			if (test_ae_item_tp(false, key_len, algo, mode,
+					    in_fd, out_fd, len,
+					    aad_fd, aad_len, tag)) {
+				printf("dma_fd:\ttest aead throughput FAILED!!!\n");
+				res = -1;
+				goto out;
+			}
+		}
+	}
+
+	printf("dma_fd:\ttest aead throughput SUCCESS.\n\n");
+
+	/* Test virt cipher */
+	for (h = 0; h < ARRAY_SIZE(test_item_tbl); h++) {
+		for (j = 0; j < ARRAY_SIZE(test_item_tbl[h].modes); j++) {
+			if (test_item_tbl[h].modes[j] == DATA_BUTT)
+				break;
+
+			algo      = test_item_tbl[h].algo;
+			key_len   = test_item_tbl[h].key_len;
+			mode      = test_item_tbl[h].modes[j];
+			aad_len   = test_item_tbl[h].aad_len;
+			len       = test_item_tbl[h].len;
+
+			if (test_ae_item_tp(true, key_len, algo, mode,
+					    in_virt, out_virt, len,
+					    aad_virt, aad_len, tag)) {
+				printf("virt:\ttest aead throughput FAILED!!!\n");
+				res = -1;
+				goto out;
+			}
+		}
+	}
+
+	printf("virt:\ttest aead throughput SUCCESS.\n\n");
+
+out:
+	if (in_fd)
+		rk_crypto_mem_free(in_fd);
+
+	if (out_fd)
+		rk_crypto_mem_free(out_fd);
+
+	if (aad_fd)
+		rk_crypto_mem_free(aad_fd);
+
+	if (in_virt)
+		free(in_virt);
+
+	if (out_virt)
+		free(out_virt);
+
+	if (aad_virt)
+		free(aad_virt);
+
+	rk_crypto_deinit();
+	return res;
+}
+
 static int test_hash_item_tp(bool is_virt, bool is_hmac, uint32_t algo,
 			     uint32_t blocksize, void *input, uint32_t data_len)
 {
@@ -809,6 +1149,9 @@ RK_RES test_throughput(void)
 
 	if (test_cipher_tp())
 		printf("Test cipher throughput FAILED.\n\n");
+
+	if (test_ae_tp())
+		printf("Test ae throughput FAILED.\n\n");
 
 	if (test_hash_tp())
 		printf("Test hash throughput FAILED.\n\n");

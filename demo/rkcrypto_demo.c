@@ -18,13 +18,15 @@ static void guide(void)
 	printf("	[-g]: HMAC\n");
 	printf("	[-h]: HMAC_VIRT\n");
 	printf("	[-i]: RSA\n");
+	printf("	[-j]: AE\n");
+	printf("	[-k]: AE_VIRT\n");
 }
 
 int main(int argc, char *argv[])
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	uint32_t opt = 0;
-	const char *opt_string = "abcdefghi";
+	const char *opt_string = "abcdefghijk";
 
 	if (argc < 2)
 		guide();
@@ -66,6 +68,14 @@ int main(int argc, char *argv[])
 		case 'i':
 			printf("TEST RSA:\n");
 			res = demo_rsa();
+			break;
+		case 'j':
+			printf("TEST AE:\n");
+			res = demo_ae();
+			break;
+		case 'k':
+			printf("TEST AE_VIRT:\n");
+			res = demo_ae_virt();
 			break;
 		case '?':
 			printf("error optopt: %c\n", optopt);

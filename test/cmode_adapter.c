@@ -89,6 +89,64 @@ RK_RES soft_cipher(uint32_t algo, uint32_t mode, uint32_t operation,
 	return ret == 0 ? RK_CRYPTO_SUCCESS : RK_CRYPTO_ERR_GENERIC;
 }
 
+RK_RES soft_ae(uint32_t algo, uint32_t mode, uint32_t operation,
+	       uint8_t *key, uint32_t key_len, uint8_t *iv, uint32_t iv_len,
+	       uint8_t *aad, uint32_t aad_len, uint32_t tag_len,
+	       uint8_t *in, uint32_t in_len, uint8_t *out, uint8_t *tag)
+{
+	int ret;
+	int is_enc = (operation == RK_OP_CIPHER_ENC) ? 1 : 0;
+	struct aes_ae_in aes_in;
+	struct aes_ae_out aes_out;
+	struct sm4_ae_in sm4_in;
+	struct sm4_ae_out sm4_out;
+
+	aes_in.key      = key;
+	aes_in.src      = in;
+	aes_in.iv       = iv;
+	aes_in.aad      = aad;
+	aes_in.key_len  = key_len;
+	aes_in.src_len  = in_len;
+	aes_in.iv_len   = iv_len;
+	aes_in.aad_len  = aad_len;
+	aes_in.tag_size = tag_len;
+
+	aes_out.dest = out;
+	aes_out.tag  = tag;
+
+	memcpy(&sm4_in, &aes_in, sizeof(aes_in));
+	memcpy(&sm4_out, &aes_out, sizeof(aes_out));
+
+	if (algo == RK_ALGO_AES) {
+		switch (mode) {
+		case RK_CIPHER_MODE_GCM:
+			ret = rk_aes_gcm_encrypt(&aes_in, &aes_out, is_enc);
+			break;
+		case RK_CIPHER_MODE_CCM:
+			ret = rk_aes_ccm_encrypt(&aes_in, &aes_out, is_enc);
+			break;
+		default:
+			return RK_CRYPTO_ERR_PARAMETER;
+		}
+	} else if (algo == RK_ALGO_SM4) {
+		switch (mode) {
+		case RK_CIPHER_MODE_GCM:
+			ret = rk_sm4_gcm_encrypt(&sm4_in, &sm4_out, is_enc);
+			break;
+		case RK_CIPHER_MODE_CCM:
+			ret = rk_sm4_ccm_op(&sm4_in, &sm4_out, is_enc);
+			break;
+		default:
+			return RK_CRYPTO_ERR_PARAMETER;
+		}
+
+	} else {
+		return RK_CRYPTO_ERR_PARAMETER;
+	}
+
+	return ret == 0 ? RK_CRYPTO_SUCCESS : RK_CRYPTO_ERR_GENERIC;
+}
+
 RK_RES soft_hash(uint32_t algo, const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len)
 {
 	int ret = -1;

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include "test_ae.h"
 #include "test_otp_key_crypto.h"
 #include "test_throughput.h"
 #include "test_cipher.h"
@@ -19,6 +20,7 @@ enum {
 	OPTION_TOP = 0,
 	ALL,
 	CIPHER,
+	AEAD,
 	HASH,
 	HMAC,
 	SETKEY,
@@ -40,6 +42,7 @@ static void guide(void)
 	printf("Entry one parameter as follow:\n");
 	printf("\t-all           Function of all ciphers\n");
 	printf("\t-cipher        Function of cipher\n");
+	printf("\t-aead          Function of aead\n");
 	printf("\t-hash          Function of hash\n");
 	printf("\t-hmac          Function of hmac\n");
 	printf("\t-rsa           Function of rsa\n");
@@ -60,6 +63,7 @@ int main(int argc, char *argv[])
 	static struct option long_options[] = {
 		{"all",		0,	NULL,	ALL},
 		{"cipher",	0,	NULL,	CIPHER},
+		{"aead",	0,	NULL,	AEAD},
 		{"hash",	0,	NULL,	HASH},
 		{"hmac",	0,	NULL,	HMAC},
 		{"setkey",	0,	NULL,	SETKEY},
@@ -80,14 +84,19 @@ int main(int argc, char *argv[])
 		switch (opt) {
 		case ALL:
 			test_cipher(verbose);
+			test_ae(verbose);
 			test_hash(verbose);
 			test_hmac(verbose);
+			test_rsa(verbose);
 			test_write_otp_key();
 			test_otp_key();
 			test_crypto_mem();
 			break;
 		case CIPHER:
 			test_cipher(verbose);
+			break;
+		case AEAD:
+			test_ae(verbose);
 			break;
 		case HASH:
 			test_hash(verbose);
