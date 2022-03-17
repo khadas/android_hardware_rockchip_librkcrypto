@@ -30,6 +30,9 @@
         (type *) ((char *) __mptr - offsetof(type, member));})
 #endif
 
+#define rkop_to_cop(rkop)	\
+	((rkop == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT)
+
 enum RK_CRYPTO_CONFIG_TYPE {
 	RK_CONFIG_TYPE_CIPHER = 0,
 	RK_CONFIG_TYPE_AE,
@@ -61,6 +64,12 @@ struct sess_id_node {
 	struct list_head	list;
 };
 
+struct ae_node_priv {
+	void		*iv;
+	uint8_t		*aad_virt;
+	int		aad_fd;
+};
+
 static int cryptodev_fd = -1;
 static int cryptodev_refcnt;
 
@@ -86,6 +95,7 @@ static const struct {
 	{-EBUSY,		RK_CRYPTO_ERR_BUSY},
 	{-ETIMEDOUT,		RK_CRYPTO_ERR_TIMEOUT},
 	{-ENOKEY,		RK_CRYPTO_ERR_KEY},
+	{-EBADMSG,		RK_CRYPTO_ERR_MAC_INVALID},
 };
 
 static RK_RES kernel_to_crypto_code(uint32_t tee_code)
@@ -225,8 +235,9 @@ static RK_RES rk_add_sess_node(uint32_t sess_id, uint32_t config_type, const voi
 		return RK_CRYPTO_ERR_PARAMETER;
 	}
 
-	node->sess_id = sess_id;
-	node->priv    = priv;
+	node->sess_id     = sess_id;
+	node->priv        = priv;
+	node->config_type = config_type;
 
 	pthread_mutex_lock(&sess_mutex);
 
@@ -327,16 +338,30 @@ static RK_RES rk_destroy_session(rk_handle handle)
 	return rk_del_sess_node(handle);
 }
 
-static RK_RES rk_update_user_iv(const rk_cipher_config *cfg)
+static RK_RES rk_update_user_iv(const void *cfg)
 {
 	struct sess_id_node *node;
+	struct ae_node_priv *ae_priv = NULL;
 
 	node = container_of(cfg, struct sess_id_node, config.cipher);
 	if (!node)
 		return RK_CRYPTO_ERR_STATE;
 
-	if (node->priv)
-		memcpy(node->priv, cfg->iv, sizeof(cfg->iv));
+	if (node->priv) {
+		V_TRACE("update user iv.");
+
+		switch (node->config_type) {
+		case RK_CONFIG_TYPE_CIPHER:
+			memcpy(node->priv, node->config.cipher.iv, sizeof(node->config.cipher.iv));
+			break;
+		case RK_CONFIG_TYPE_AE:
+			ae_priv = node->priv;
+			memcpy(ae_priv->iv, node->config.ae.iv, node->config.ae.iv_len);
+			break;
+		default:
+			break;
+		}
+	}
 
 	return RK_CRYPTO_SUCCESS;
 }
@@ -475,7 +500,7 @@ RK_RES rk_cipher_crypt(rk_handle handle, int in_fd, int out_fd, uint32_t len)
 	cryp.src_fd = in_fd;
 	cryp.dst_fd = out_fd;
 	cryp.iv     = (void *)cipher_cfg->iv;
-	cryp.op     = (cipher_cfg->operation == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT;
+	cryp.op     = rkop_to_cop(cipher_cfg->operation);
 	cryp.flags  = COP_FLAG_WRITE_IV;
 
 	res = xioctl(cryptodev_fd, RIOCCRYPT_FD, &cryp);
@@ -518,7 +543,7 @@ RK_RES rk_cipher_crypt_virt(rk_handle handle, const uint8_t *in, uint8_t *out, u
 	cryp.src   = (void *)in;
 	cryp.dst   = out;
 	cryp.iv    = (void *)cipher_cfg->iv;
-	cryp.op    = (cipher_cfg->operation == RK_OP_CIPHER_ENC) ? COP_ENCRYPT : COP_DECRYPT;
+	cryp.op    = rkop_to_cop(cipher_cfg->operation);
 	cryp.flags = COP_FLAG_WRITE_IV;
 
 	res = xioctl(cryptodev_fd, CIOCCRYPT, &cryp);
@@ -540,6 +565,223 @@ exit:
 RK_RES rk_cipher_final(rk_handle handle)
 {
 	CHECK_CRYPTO_INITED();
+
+	return rk_destroy_session(handle);
+}
+
+RK_RES rk_ae_init(const rk_ae_config *config, rk_handle *handle)
+{
+	RK_RES res;
+	struct session_op sess;
+	uint32_t crypto_id = 0;
+	struct ae_node_priv *ae_priv = NULL;
+
+	CHECK_CRYPTO_INITED();
+
+	RK_CRYPTO_CHECK_PARAM(!config || !handle);
+
+	memset(&sess, 0, sizeof(sess));
+
+	res = rk_get_crypto_id(config->algo, config->mode, &crypto_id);
+	if (res) {
+		E_TRACE("rk_get_crypto_id error!\n");
+		return res;
+	}
+
+	sess.cipher = crypto_id;
+	sess.key    = (__u8 *)config->key;
+	sess.keylen = config->key_len;
+
+	ae_priv = calloc(1, sizeof(*ae_priv));
+	if (!ae_priv) {
+		E_TRACE("malloc ae_priv error!\n");
+		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
+	}
+
+	ae_priv->iv = (void *)config->iv;
+
+	return rk_create_session(&sess, RK_CONFIG_TYPE_AE,
+				 config, (void *)ae_priv, handle);
+}
+
+static RK_RES ae_set_aad(rk_handle handle, int aad_fd, uint8_t *aad_virt)
+{
+	struct sess_id_node *node = NULL;
+	struct ae_node_priv *ae_priv = NULL;
+
+	node = rk_get_sess_node(handle);
+	if (!node) {
+		E_TRACE("rk_get_sess_node error!\n");
+		return RK_CRYPTO_ERR_STATE;
+	}
+
+	ae_priv = node->priv;
+
+	if (aad_fd)
+		ae_priv->aad_fd = aad_fd;
+	if (aad_virt)
+		ae_priv->aad_virt = aad_virt;
+
+	return RK_CRYPTO_SUCCESS;
+}
+
+RK_RES rk_ae_set_aad(rk_handle handle, int aad_fd)
+{
+	return ae_set_aad(handle, aad_fd, NULL);
+}
+
+RK_RES rk_ae_set_aad_virt(rk_handle handle, uint8_t *aad_virt)
+{
+	return ae_set_aad(handle, 0, aad_virt);
+}
+
+RK_RES rk_ae_crypt(rk_handle handle, int in_fd, int out_fd, uint32_t len, uint8_t *tag)
+{
+	struct crypt_auth_fd_op op;
+	rk_ae_config *ae_cfg = NULL;
+	struct sess_id_node *node = NULL;
+	struct ae_node_priv *ae_priv = NULL;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+
+	CHECK_CRYPTO_INITED();
+
+	RK_CRYPTO_CHECK_PARAM(len == 0);
+
+	node = rk_get_sess_node(handle);
+	if (!node) {
+		E_TRACE("rk_get_sess_node error!\n");
+		return RK_CRYPTO_ERR_STATE;
+	}
+
+	ae_priv =  node->priv;
+
+	/* make sure rk_ae_set_aad has been called */
+	RK_CRYPTO_CHECK_PARAM(ae_priv->aad_fd == 0);
+
+	ae_cfg = rk_get_sess_config(handle);
+	if (!ae_cfg) {
+		E_TRACE("rk_get_sess_config error!\n");
+		return RK_CRYPTO_ERR_STATE;
+	}
+
+	if (ae_cfg->tag_len)
+		RK_CRYPTO_CHECK_PARAM(!tag);
+
+	memset(&op, 0, sizeof(op));
+
+	/* Encrypt data.in to data.encrypted */
+	op.ses      = handle;
+	op.op       = rkop_to_cop(ae_cfg->operation);
+	op.flags    = COP_FLAG_WRITE_IV | COP_FLAG_AEAD_RK_TYPE;
+	op.len      = len;
+	op.src_fd   = in_fd;
+	op.dst_fd   = out_fd;
+	op.iv       = (unsigned long)ae_cfg->iv | (__u64)0;
+	op.iv_len   = ae_cfg->iv_len;
+	op.auth_fd  = ae_priv->aad_fd;
+	op.auth_len = ae_cfg->aad_len;
+	op.tag_len  = ae_cfg->tag_len;
+	op.tag      = (unsigned long)tag | (__u64)0;
+
+	V_TRACE("in and out are %s address.", (in_fd == out_fd) ? "the same" : "different");
+	V_TRACE("cipher data len = %d, aad_len = %d, tag_len = %d",
+		len, ae_cfg->aad_len, ae_cfg->tag_len);
+
+	res = xioctl(cryptodev_fd, RIOCAUTHCRYPT_FD, &op);
+	if (res) {
+		E_TRACE("RIOCCRYPT_FD error!\n");
+		goto exit;
+	}
+
+	res = rk_update_user_iv(ae_cfg);
+	if (res) {
+		E_TRACE("rk_update_user_iv error[0x%x]!\n", res);
+		goto exit;
+	}
+
+exit:
+	return res;
+}
+
+RK_RES rk_ae_crypt_virt(rk_handle handle, const uint8_t *in, uint8_t *out, uint32_t len,
+			uint8_t *tag)
+{
+	struct crypt_auth_op op;
+	rk_ae_config *ae_cfg = NULL;
+	struct sess_id_node *node = NULL;
+	struct ae_node_priv *ae_priv = NULL;
+	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+
+	CHECK_CRYPTO_INITED();
+
+	RK_CRYPTO_CHECK_PARAM(!in || !out || len == 0);
+
+	node = rk_get_sess_node(handle);
+	if (!node) {
+		E_TRACE("rk_get_sess_node error!\n");
+		return RK_CRYPTO_ERR_STATE;
+	}
+
+	ae_priv =  node->priv;
+
+	/* make sure rk_ae_set_aad_virt has been called */
+	RK_CRYPTO_CHECK_PARAM(ae_priv->aad_virt == 0);
+
+	ae_cfg = rk_get_sess_config(handle);
+	if (!ae_cfg) {
+		E_TRACE("rk_get_sess_config error!\n");
+		return RK_CRYPTO_ERR_STATE;
+	}
+
+	memset(&op, 0, sizeof(op));
+
+	/* Encrypt data.in to data.encrypted */
+	op.ses      = handle;
+	op.op       = rkop_to_cop(ae_cfg->operation);
+	op.flags    = COP_FLAG_WRITE_IV | COP_FLAG_AEAD_RK_TYPE;
+	op.len      = len;
+	op.src      = (void *)in;
+	op.dst      = out;
+	op.iv       = (void *)ae_cfg->iv;
+	op.iv_len   = ae_cfg->iv_len;
+	op.auth_src = ae_priv->aad_virt;
+	op.auth_len = ae_cfg->aad_len;
+	op.tag_len  = ae_cfg->tag_len;
+	op.tag      = tag;
+
+	V_TRACE("in and out are %s address.", (in == out) ? "the same" : "different");
+	V_TRACE("cipher data len = %d, aad_len = %d, tag_len = %d",
+		len, ae_cfg->aad_len, ae_cfg->tag_len);
+
+	res = xioctl(cryptodev_fd, CIOCAUTHCRYPT, &op);
+	if (res) {
+		E_TRACE("CIOCAUTHCRYPT error!\n");
+		goto exit;
+	}
+
+	res = rk_update_user_iv(ae_cfg);
+	if (res) {
+		E_TRACE("rk_update_user_iv error[0x%x]!\n", res);
+		goto exit;
+	}
+
+exit:
+	return res;
+}
+
+RK_RES rk_ae_final(rk_handle handle)
+{
+	struct sess_id_node *node = NULL;
+
+	CHECK_CRYPTO_INITED();
+
+	node = rk_get_sess_node(handle);
+	if (!node) {
+		E_TRACE("rk_get_sess_node error!\n");
+		return RK_CRYPTO_ERR_STATE;
+	}
+
+	free(node->priv);
 
 	return rk_destroy_session(handle);
 }

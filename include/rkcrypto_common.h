@@ -39,6 +39,7 @@ typedef uint32_t rk_handle;
 #define RK_CRYPTO_ERR_VERIFY		0xF000000A
 #define RK_CRYPTO_ERR_PADDING		0xF000000B
 #define RK_CRYPTO_ERR_PADDING_OVERFLOW	0xF000000C
+#define RK_CRYPTO_ERR_MAC_INVALID	0xF000000D
 
 /* Algorithm operation */
 #define RK_OP_CIPHER_ENC		1
@@ -72,6 +73,7 @@ typedef uint32_t rk_handle;
 #define MAX_HASH_BLOCK_SIZE		128
 #define MAX_TDES_KEY_SIZE		24
 #define MAX_AES_KEY_SIZE		32
+#define MAX_AE_TAG_SIZE			16
 
 #define RSA_BITS_1024			1024
 #define RSA_BITS_2048			2048
