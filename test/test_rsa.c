@@ -15,11 +15,11 @@
 #define TEST_BUFFER_SIZE	sizeof(no_padding_data)
 
 #define TEST_END_PASS(padding_name) \
-	printf("****************** %-18s %-16s test PASS !!! ******************\n", \
+	printf("****************** %-20s %-16s test PASS !!! ******************\n", \
 	       __func__, padding_name)
 
 #define TEST_END_FAIL(padding_name) \
-	printf("****************** %-18s %-16s test FAIL !!! ******************\n", \
+	printf("****************** %-20s %-16s test FAIL !!! ******************\n", \
 	       __func__, padding_name)
 
 typedef RK_RES (*test_rsa_one)(uint32_t padding, const char *padding_name,
@@ -507,7 +507,7 @@ exit:
 }
 
 static RK_RES openssl_sign(const uint8_t *in, uint32_t in_len, uint8_t *out, size_t *out_len,
-			int padding, const EVP_MD *digest_algorithm, rk_rsa_priv_key_pack *priv)
+			   int padding, const EVP_MD *digest_algorithm, rk_rsa_priv_key_pack *priv)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	EVP_PKEY_CTX *pkey_ctx;
@@ -575,7 +575,7 @@ exit:
 }
 
 static RK_RES openssl_verify(const uint8_t *in, uint32_t in_len, uint8_t *sign, uint32_t sign_len,
-			  int padding, const EVP_MD *digest_algorithm, rk_rsa_priv_key_pack *priv)
+			     int padding, const EVP_MD *digest_algorithm, rk_rsa_priv_key_pack *priv)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 	EVP_PKEY_CTX *pkey_ctx;
@@ -677,6 +677,89 @@ static void test_init_privkey(rk_rsa_priv_key_pack *priv)
 	priv->key.qp     = rsa_2048_qp;
 	priv->key.qp_len = sizeof(rsa_2048_qp);
 #endif
+}
+
+static RK_RES get_hash_algo_from_padding(uint32_t padding, uint32_t *hlen, uint32_t *hash_algo)
+{
+	uint32_t shaalgo = RK_ALGO_SHA1;
+
+	switch (padding) {
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA1:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA1:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA1:
+		*hlen = SHA1_HASH_SIZE;
+		shaalgo = RK_ALGO_SHA1;
+		break;
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA224:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA224:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA224:
+		*hlen = SHA224_HASH_SIZE;
+		shaalgo = RK_ALGO_SHA224;
+		break;
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA256:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA256:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA256:
+		*hlen = SHA256_HASH_SIZE;
+		shaalgo = RK_ALGO_SHA256;
+		break;
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA384:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA384:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA384:
+		*hlen = SHA384_HASH_SIZE;
+		shaalgo = RK_ALGO_SHA384;
+		break;
+	case RK_RSA_CRYPT_PADDING_OAEP_SHA512:
+	case RK_RSA_SIGN_PADDING_PKCS1_V15_SHA512:
+	case RK_RSA_SIGN_PADDING_PKCS1_PSS_SHA512:
+		*hlen = SHA512_HASH_SIZE;
+		shaalgo = RK_ALGO_SHA512;
+		break;
+	default:
+		D_TRACE("unknown padding %x", padding);
+		*hlen = 0;
+		shaalgo = 0;
+		return RK_CRYPTO_ERR_PADDING;
+	}
+
+	*hash_algo = shaalgo;
+
+	return RK_CRYPTO_SUCCESS;
+}
+
+static RK_RES calc_padding_digest(uint32_t padding, const uint8_t *data, uint32_t data_len,
+				  uint8_t *digest)
+{
+	RK_RES res;
+	uint32_t hash_algo, hash_len;
+	rk_hash_config hash_cfg;
+	rk_handle hash_hdl = 0;
+
+	res = get_hash_algo_from_padding(padding, &hash_len, &hash_algo);
+	if (res)
+		goto exit;
+
+	memset(&hash_cfg, 0x00, sizeof(hash_cfg));
+
+	hash_cfg.algo = hash_algo;
+
+	res = rk_hash_init(&hash_cfg, &hash_hdl);
+	if (res)
+		goto exit;
+
+	if (data && data_len != 0) {
+		res = rk_hash_update_virt(hash_hdl, data, data_len);
+		if (res) {
+			rk_hash_final(hash_hdl, NULL);
+			goto exit;
+		}
+	}
+
+	res = rk_hash_final(hash_hdl, digest);
+exit:
+	if (res)
+		D_TRACE("digest error.");
+
+	return res;
 }
 
 static RK_RES test_rsa_pub_enc(uint32_t padding, const char *padding_name,
@@ -850,13 +933,14 @@ exit:
 	return res;
 }
 
-static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
-			    const uint8_t *in, uint32_t in_len,
-			    const uint8_t *expect, int verbose)
+static RK_RES test_rsa_sign_common(uint32_t padding, const char *padding_name,
+				   const uint8_t *in, uint32_t in_len, const uint8_t *hash,
+				   const uint8_t *expect, int verbose)
 {
 	RK_RES res = RK_CRYPTO_SUCCESS;
 	uint8_t  *sign = NULL;
 	uint32_t sign_len;
+	const char *test_name = hash ? "test_rsa_sign_digest" : "test_rsa_sign_data";
 	rk_rsa_pub_key_pack pub_key;
 	rk_rsa_priv_key_pack priv_key;
 
@@ -870,7 +954,7 @@ static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
 	test_init_pubkey(&pub_key);
 	test_init_privkey(&priv_key);
 
-	res = rk_rsa_sign(&priv_key, padding, in, in_len, NULL, sign, &sign_len);
+	res = rk_rsa_sign(&priv_key, padding, in, in_len, hash, sign, &sign_len);
 	if (res) {
 		printf("rk_rsa_sign failed %x\n", res);
 		goto exit;
@@ -905,14 +989,14 @@ static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
 	}
 #endif
 
-	res = rk_rsa_verify(&pub_key, padding, in, in_len, NULL, sign, sign_len);
+	res = rk_rsa_verify(&pub_key, padding, in, in_len, hash, sign, sign_len);
 	if (res) {
 		printf("rk_rsa_verify failed %x\n", res);
 		goto exit;
 	}
 
 	*sign = 0xaa;
-	res = rk_rsa_verify(&pub_key, padding, in, in_len, NULL, sign, sign_len);
+	res = rk_rsa_verify(&pub_key, padding, in, in_len, hash, sign, sign_len);
 	if (res != RK_CRYPTO_ERR_VERIFY) {
 		printf("rk_rsa_verify should be RK_CRYPTO_ERR_VERIFY but %x\n", res);
 		goto exit;
@@ -921,15 +1005,55 @@ static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
 	res = RK_CRYPTO_SUCCESS;
 
 	if (verbose)
-		TEST_END_PASS(padding_name);
+		printf("****************** %-20s %-16s test PASS !!! ******************\n",
+		       test_name, padding_name);
 
 exit:
 	if (sign)
 		free(sign);
 
 	if (res && verbose)
-		TEST_END_FAIL(padding_name);
+		printf("****************** %-20s %-16s test FAIL !!! ******************\n",
+		       test_name, padding_name);
 
+	return res;
+}
+
+static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
+			    const uint8_t *in, uint32_t in_len,
+			    const uint8_t *expect, int verbose)
+{
+	RK_RES res;
+	uint8_t digest[SHA512_HASH_SIZE];
+
+	res = test_rsa_sign_common(padding, padding_name, in, in_len,
+				   NULL, expect, verbose);
+
+	if (res) {
+		printf("test_rsa_sign data failed %x\n", res);
+		goto exit;
+	}
+
+	if (verbose)
+		printf("\n");
+
+	memset(digest, 0x00, sizeof(digest));
+
+	res = calc_padding_digest(padding, in, in_len, digest);
+	if (res) {
+		printf("calc_padding_digest %x\n", res);
+		goto exit;
+	}
+
+	res = test_rsa_sign_common(padding, padding_name, in, in_len,
+				   digest, expect, verbose);
+
+	if (res) {
+		printf("test_rsa_sign digest failed %x\n", res);
+		goto exit;
+	}
+
+exit:
 	return res;
 }
 
