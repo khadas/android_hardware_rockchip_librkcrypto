@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <xf86drm.h>
 #include <rockchip_drm.h>
@@ -16,6 +17,7 @@
 #include "rkcrypto_mem.h"
 #include "rkcrypto_trace.h"
 #include "rk_list.h"
+#include "dma-heap.h"
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -23,6 +25,7 @@
 
 #define DRM_MODULE_NAME "rockchip"
 #define DRM_CARD_PATH "/dev/dri/card0"
+#define DMA_HEAP_PATH "/dev/rk_dma_heap/rk-dma-heap-cma"
 
 #define IS_DMA_INVALID()	(dma_node_fd < 0)
 
@@ -112,7 +115,7 @@ static struct mem_pool_node *crypto_alloc_node_drm(int dma_node_fd, uint32_t siz
 				 dma_node_fd, map_req.offset);
 #else
 	node->mem.vaddr = mmap(0, req.size, PROT_READ | PROT_WRITE, MAP_SHARED,
-				 dma_node_fd, map_req.offset);
+			       dma_node_fd, map_req.offset);
 #endif
 	if (node->mem.vaddr == MAP_FAILED) {
 		E_TRACE("failed to mmap buffer. offset = %"PRIu64", reason: %s\n",
@@ -159,10 +162,111 @@ static void crypto_free_node_drm(int dma_node_fd, struct mem_pool_node *node)
 	free(node);
 }
 
+static int crypto_init_dma_heap(void)
+{
+	int fd;
+
+	fd = open(DMA_HEAP_PATH, O_RDWR);
+	if (fd < 0)
+		D_TRACE("failed to open cma heap !\n");
+
+	return fd;
+}
+
+static void crypto_deinit_dma_heap(int dma_node_fd)
+{
+	if (dma_node_fd >= 0)
+		close(dma_node_fd);
+}
+
+static struct mem_pool_node *crypto_alloc_node_dma_heap(int dma_node_fd, uint32_t size)
+{
+	int ret = -1;
+	size_t min_size;
+	struct mem_pool_node *node = NULL;
+	struct dma_heap_allocation_data req = {
+		.len = size,
+		.fd_flags = O_CLOEXEC | O_RDWR,
+	};
+	struct drm_rockchip_gem_map_off map_req;
+
+	/* cma must alloc at least two page */
+	min_size = 2 * getpagesize();
+	req.len  = size < min_size ? min_size : size;
+
+	node = malloc(sizeof(*node));
+	if (!node)
+		return NULL;
+
+	memset(node, 0x00, sizeof(*node));
+	memset(&map_req, 0x00, sizeof(map_req));
+
+	req.fd = 0;
+	ret = ioctl(dma_node_fd, DMA_HEAP_IOCTL_ALLOC, &req);
+	if (ret < 0) {
+		E_TRACE("DMA_HEAP_ALLOC_BUFFER failed\n");
+		free(node);
+		return NULL;
+	}
+
+	node->mem.dma_fd = req.fd;
+
+	D_TRACE("dma_fd = %d, alloc_size = %u, real_size = %u\n",
+		node->mem.dma_fd, size, req.len);
+
+#ifdef __ANDROID__
+	node->mem.vaddr = mmap64(0, req.len, PROT_READ | PROT_WRITE, MAP_SHARED, req.fd, 0);
+#else
+	node->mem.vaddr = mmap(0, req.len, PROT_READ | PROT_WRITE, MAP_SHARED, req.fd, 0);
+#endif
+	if (node->mem.vaddr == MAP_FAILED) {
+		E_TRACE("failed to mmap buffer. offset = %"PRIu64", reason: %s\n",
+			map_req.offset, strerror(errno));
+		ret = -1;
+		goto error;
+	}
+
+	node->flags    = req.fd_flags;
+	node->mem.size = size;
+
+	return node;
+error:
+	close(req.fd);
+
+	if (node)
+		free(node);
+
+	return NULL;
+}
+
+static void crypto_free_node_dma_heap(int dma_node_fd, struct mem_pool_node *node)
+{
+	size_t min_size;
+
+	min_size = 2 * getpagesize();
+
+	if (!node || node->mem.size == 0)
+		return;
+
+	if (node->mem.vaddr)
+		munmap(node->mem.vaddr, node->mem.size < min_size ? min_size : node->mem.size);
+
+	if (node->mem.dma_fd >= 0)
+		close(node->mem.dma_fd);
+
+	free(node);
+}
+
 struct mem_ops rk_mem_ops_tbl[] = {
 	{
-		.init = crypto_init_drm,
-		.deinit = crypto_deinit_drm,
+		.init       = crypto_init_dma_heap,
+		.deinit     = crypto_deinit_dma_heap,
+		.alloc_node = crypto_alloc_node_dma_heap,
+		.free_node  = crypto_free_node_dma_heap,
+	},
+	{
+		.init       = crypto_init_drm,
+		.deinit     = crypto_deinit_drm,
 		.alloc_node = crypto_alloc_node_drm,
 		.free_node  = crypto_free_node_drm,
 	},
