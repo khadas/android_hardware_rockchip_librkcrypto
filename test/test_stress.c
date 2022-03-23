@@ -20,19 +20,19 @@ void stress_test(int test_cnt)
 
 		res = test_cipher(verbose);
 		if (res) {
-			printf("test_cipher error[%d]\n", res);
+			printf("test_cipher error[%x]\n", res);
 			goto exit;
 		}
 
 		res = test_hash(verbose);
 		if (res) {
-			printf("test_hash error[%d]\n", res);
+			printf("test_hash error[%x]\n", res);
 			goto exit;
 		}
 
 		res = test_hmac(verbose);
 		if (res) {
-			printf("test_hmac error[%d]\n", res);
+			printf("test_hmac error[%x]\n", res);
 			goto exit;
 		}
 	}

@@ -22,6 +22,10 @@
 	printf("****************** %-20s %-16s test FAIL !!! ******************\n", \
 	       __func__, padding_name)
 
+#define TEST_END_NA(padding_name) \
+	printf("****************** %-20s %-16s test N/A !!! ******************\n", \
+	       __func__, padding_name)
+
 typedef RK_RES (*test_rsa_one)(uint32_t padding, const char *padding_name,
 			       const uint8_t *in, uint32_t in_len,
 			       const uint8_t *expect, int verbose);
@@ -203,15 +207,21 @@ static const struct test_rsa_item test_rsa_tbl[] = {
 	TEST_RSA_CRYPT(test_rsa_priv_enc, BLOCK_TYPE_1, test_data),
 	TEST_RSA_CRYPT(test_rsa_priv_enc, BLOCK_TYPE_2, test_data),
 	TEST_RSA_CRYPT(test_rsa_priv_enc, OAEP_SHA1,    test_data),
+	TEST_RSA_CRYPT(test_rsa_priv_enc, OAEP_SHA224,  test_data),
 	TEST_RSA_CRYPT(test_rsa_priv_enc, OAEP_SHA256,  test_data),
+	TEST_RSA_CRYPT(test_rsa_priv_enc, OAEP_SHA384,  test_data),
 	TEST_RSA_CRYPT(test_rsa_priv_enc, OAEP_SHA512,  test_data),
 	TEST_RSA_CRYPT(test_rsa_priv_enc, PKCS1_V1_5,   test_data),
 
 	TEST_RSA_SIGN(test_rsa_sign,      PKCS1_V15_SHA1,   no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,      PKCS1_V15_SHA224, no_padding_data),
 	TEST_RSA_SIGN(test_rsa_sign,      PKCS1_V15_SHA256, no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,      PKCS1_V15_SHA384, no_padding_data),
 	TEST_RSA_SIGN(test_rsa_sign,      PKCS1_V15_SHA512, no_padding_data),
 	TEST_RSA_SIGN(test_rsa_sign,	  PKCS1_PSS_SHA1,   no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,	  PKCS1_PSS_SHA224, no_padding_data),
 	TEST_RSA_SIGN(test_rsa_sign,	  PKCS1_PSS_SHA256, no_padding_data),
+	TEST_RSA_SIGN(test_rsa_sign,	  PKCS1_PSS_SHA384, no_padding_data),
 	TEST_RSA_SIGN(test_rsa_sign,	  PKCS1_PSS_SHA512, no_padding_data),
 };
 
@@ -792,7 +802,8 @@ static RK_RES test_rsa_pub_enc(uint32_t padding, const char *padding_name,
 
 	res = rk_rsa_pub_encrypt(&pub_key, padding, in, in_len, enc_buf, &out_len);
 	if (res) {
-		printf("rk_rsa_pub_encrypt failed %x\n", res);
+		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED)
+			printf("rk_rsa_pub_encrypt failed %x\n", res);
 		goto exit;
 	}
 
@@ -844,9 +855,6 @@ static RK_RES test_rsa_pub_enc(uint32_t padding, const char *padding_name,
 		goto exit;
 	}
 
-	if (verbose)
-		TEST_END_PASS(padding_name);
-
 exit:
 	if (enc_buf)
 		free(enc_buf);
@@ -854,10 +862,17 @@ exit:
 	if (dec_buf)
 		free(dec_buf);
 
-	if (res && verbose)
-		TEST_END_FAIL(padding_name);
+	if (verbose) {
+		if (res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
+			TEST_END_NA(padding_name);
+		} else if (res) {
+			TEST_END_FAIL(padding_name);
+		} else {
+			TEST_END_PASS(padding_name);
+		}
+	}
 
-	return res;
+	return res == RK_CRYPTO_ERR_NOT_SUPPORTED ? RK_CRYPTO_SUCCESS : res;
 }
 
 static RK_RES test_rsa_priv_enc(uint32_t padding, const char *padding_name,
@@ -890,7 +905,8 @@ static RK_RES test_rsa_priv_enc(uint32_t padding, const char *padding_name,
 
 	res = rk_rsa_priv_encrypt(&priv_key, padding, in, in_len, enc_buf, &out_len);
 	if (res) {
-		printf("rk_rsa_priv_encrypt failed %x\n", res);
+		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED)
+			printf("rk_rsa_priv_encrypt failed %x\n", res);
 		goto exit;
 	}
 
@@ -916,21 +932,24 @@ static RK_RES test_rsa_priv_enc(uint32_t padding, const char *padding_name,
 		goto exit;
 	}
 
-	if (verbose)
-		TEST_END_PASS(padding_name);
-
 exit:
 	if (enc_buf)
 		free(enc_buf);
 
-
 	if (dec_buf)
 		free(dec_buf);
 
-	if (res && verbose)
-		TEST_END_FAIL(padding_name);
+	if (verbose) {
+		if (res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
+			TEST_END_NA(padding_name);
+		} else if (res) {
+			TEST_END_FAIL(padding_name);
+		} else {
+			TEST_END_PASS(padding_name);
+		}
+	}
 
-	return res;
+	return res == RK_CRYPTO_ERR_NOT_SUPPORTED ? RK_CRYPTO_SUCCESS : res;
 }
 
 static RK_RES test_rsa_sign_common(uint32_t padding, const char *padding_name,
@@ -1026,6 +1045,25 @@ static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
 	RK_RES res;
 	uint8_t digest[SHA512_HASH_SIZE];
 
+	memset(digest, 0x00, sizeof(digest));
+
+	res = calc_padding_digest(padding, in, in_len, digest);
+	if (res) {
+		if (res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
+			if (verbose) {
+				printf("****************** %-20s %-16s test N/A !!! ******************\n",
+				       "test_rsa_sign_data", padding_name);
+				printf("\n");
+				printf("****************** %-20s %-16s test N/A !!! ******************\n",
+				       "test_rsa_sign_digest", padding_name);
+			}
+			return RK_CRYPTO_SUCCESS;
+		}
+
+		printf("calc_padding_digest %x\n", res);
+		goto exit;
+	}
+
 	res = test_rsa_sign_common(padding, padding_name, in, in_len,
 				   NULL, expect, verbose);
 
@@ -1036,14 +1074,6 @@ static RK_RES test_rsa_sign(uint32_t padding, const char *padding_name,
 
 	if (verbose)
 		printf("\n");
-
-	memset(digest, 0x00, sizeof(digest));
-
-	res = calc_padding_digest(padding, in, in_len, digest);
-	if (res) {
-		printf("calc_padding_digest %x\n", res);
-		goto exit;
-	}
 
 	res = test_rsa_sign_common(padding, padding_name, in, in_len,
 				   digest, expect, verbose);

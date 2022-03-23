@@ -760,7 +760,7 @@ RK_RES rk_rsa_pub_encrypt(const rk_rsa_pub_key_pack *pub, enum RK_RSA_CRYPT_PADD
 	res = rk_rsa_crypt_do_padding(padding, pub->key.n_len, false,
 				      in, in_len, data_pad, &data_pad_len);
 	if (res) {
-		E_TRACE("rsa padding %d error!", padding);
+		D_TRACE("rsa padding %d error!", padding);
 		return res;
 	}
 
@@ -781,7 +781,7 @@ RK_RES rk_rsa_priv_decrypt(const rk_rsa_priv_key_pack *priv, enum RK_RSA_CRYPT_P
 	res = rk_rsa_crypt_common((void *)priv, COP_FLAG_RSA_PRIV, AOP_DECRYPT,
 				   in, in_len, data_pad, &data_pad_len);
 	if (res) {
-		E_TRACE("rk_rsa_crypt_common error! %x", res);
+		D_TRACE("rk_rsa_crypt_common error! %x", res);
 		return res;
 	}
 
@@ -803,7 +803,7 @@ RK_RES rk_rsa_priv_encrypt(const rk_rsa_priv_key_pack *priv, enum RK_RSA_CRYPT_P
 	res = rk_rsa_crypt_do_padding(padding, priv->key.n_len, true,
 				      in, in_len, data_pad, &data_pad_len);
 	if (res) {
-		E_TRACE("rsa padding %d error!", padding);
+		D_TRACE("rsa padding %d error!", padding);
 		return res;
 	}
 
@@ -824,7 +824,7 @@ RK_RES rk_rsa_pub_decrypt(const rk_rsa_pub_key_pack *pub, enum RK_RSA_CRYPT_PADD
 	res = rk_rsa_crypt_common((void *)pub, COP_FLAG_RSA_PUB, AOP_ENCRYPT,
 				   in, in_len, data_pad, &data_pad_len);
 	if (res) {
-		E_TRACE("rk_rsa_crypt_common error! %x", res);
+		D_TRACE("rk_rsa_crypt_common error! %x", res);
 		return res;
 	}
 
@@ -849,7 +849,7 @@ RK_RES rk_rsa_sign(const rk_rsa_priv_key_pack *priv, enum RK_RSA_SIGN_PADDING pa
 				     rk_mpi_bitlen(priv->key.n, priv->key.n_len),
 				     in, in_len, hash, data_pad, &data_pad_len);
 	if (res) {
-		E_TRACE("rsa padding %d error!", padding);
+		D_TRACE("rsa padding %d error!", padding);
 		return res;
 	}
 
@@ -873,7 +873,7 @@ RK_RES rk_rsa_verify(const rk_rsa_pub_key_pack *pub, enum RK_RSA_SIGN_PADDING pa
 	res = rk_rsa_crypt_common((void *)pub, COP_FLAG_RSA_PUB, AOP_ENCRYPT,
 				  sign, sign_len, dec_pad, &dec_pad_len);
 	if (res) {
-		E_TRACE("rsa rk_rsa_crypt_common error[%x]!", res);
+		D_TRACE("rsa rk_rsa_crypt_common error[%x]!", res);
 		goto exit;
 	}
 
@@ -882,7 +882,7 @@ RK_RES rk_rsa_verify(const rk_rsa_pub_key_pack *pub, enum RK_RSA_SIGN_PADDING pa
 				       rk_mpi_bitlen(pub->key.n, pub->key.n_len),
 				       in, in_len, hash, dec_pad);
 	if (res) {
-		E_TRACE("rsa padding %d error!", padding);
+		D_TRACE("rsa padding %d error!", padding);
 		goto exit;
 	}
 

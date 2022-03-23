@@ -611,8 +611,10 @@ static RK_RES rsa_padding_add_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint1
 		goto error;
 
 	/* first comparison checks for overflow */
-	if (in_len + 2 * hlen + 2 < in_len || olen < in_len + 2 * hlen + 2)
-		return RK_CRYPTO_ERR_PADDING;
+	if (in_len + 2 * hlen + 2 < in_len || olen < in_len + 2 * hlen + 2) {
+		res = RK_CRYPTO_ERR_PADDING;
+		goto error;
+	}
 
 	memset(out, 0, olen);
 
@@ -621,7 +623,7 @@ static RK_RES rsa_padding_add_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint1
 	/* Generate a random octet string seed */
 	res = rk_get_random(p, hlen);
 	if (res)
-		return RK_CRYPTO_ERR_PADDING;
+		goto error;
 
 	p += hlen;
 
@@ -648,7 +650,7 @@ static RK_RES rsa_padding_add_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint1
 	return RK_CRYPTO_SUCCESS;
 
 error:
-	return RK_CRYPTO_ERR_PADDING;
+	return res;
 }
 
 /*
@@ -658,7 +660,7 @@ RK_RES rsa_padding_check_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint16_t k
 				   const uint8_t *label, size_t label_len,
 				   const uint8_t *in, uint8_t *out, uint32_t *out_len)
 {
-	RK_RES res;
+	RK_RES res = RK_CRYPTO_ERR_PADDING;
 	uint32_t ilen, i, pad_len;
 	uint8_t *p, bad, pad_done;
 	uint8_t *buf = NULL;
@@ -673,30 +675,32 @@ RK_RES rsa_padding_check_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint16_t k
 
 	buf = malloc(ilen);
 	if (!buf)
-		return RK_CRYPTO_ERR_NOT_SUPPORTED;
+		return RK_CRYPTO_ERR_OUT_OF_MEMORY;
 
 	memcpy(buf, in, ilen);
 
 	// checking for integer underflow
-	if (2 * hlen + 2 > ilen)
-		return RK_CRYPTO_ERR_PADDING;
+	if (2 * hlen + 2 > ilen) {
+		res = RK_CRYPTO_ERR_PADDING;
+		goto exit;
+	}
 
 	/*
 	 * Unmask data and generate lHash
 	 */
 	res = calc_padding_digest(hash_algo, label, label_len, lhash);
 	if (res)
-		return RK_CRYPTO_ERR_PADDING;
+		goto exit;
 
 	/* seed: Apply seedMask to maskedSeed */
 	res = mgf_mask(buf + 1, hlen, buf + hlen + 1, ilen - hlen - 1, hash_algo, hlen);
 	if (res)
-		return RK_CRYPTO_ERR_PADDING;
+		goto exit;
 
 	/* DB: Apply dbMask to maskedDB */
 	res = mgf_mask(buf + hlen + 1, ilen - hlen - 1, buf + 1, hlen, hash_algo, hlen);
 	if (res)
-		return RK_CRYPTO_ERR_PADDING;
+		goto exit;
 
 	/*
 	 * Check contents, in "constant-time"
@@ -731,18 +735,26 @@ RK_RES rsa_padding_check_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint16_t k
 	 * recommendations in PKCS#1 v2.2: an opponent cannot distinguish between
 	 * the different error conditions.
 	 */
-	if (bad != 0)
-		return RK_CRYPTO_ERR_PADDING;
+	if (bad != 0) {
+		res = RK_CRYPTO_ERR_PADDING;
+		goto exit;
+	}
 
-	if (ilen - (p - buf) > key_len)
-		return RK_CRYPTO_ERR_PADDING;
+	if (ilen - (p - buf) > key_len) {
+		res = RK_CRYPTO_ERR_PADDING;
+		goto exit;
+	}
 
 	*out_len = ilen - (p - buf);
 	memcpy(out, p, *out_len);
 
-	return RK_CRYPTO_SUCCESS;
-}
+	res = RK_CRYPTO_SUCCESS;
+exit:
+	if (buf)
+		free(buf);
 
+	return res;
+}
 
 /*
  * Implementation of the PKCS#1 v2.1 RSASSA-PKCS1-V1_5-SIGN function
@@ -873,7 +885,7 @@ RK_RES rsa_padding_add_pss_type(uint16_t key_len, uint16_t n_bits,
 	/* Generate salt of length slen */
 	res = rk_get_random(salt, slen);
 	if (res)
-		return RK_CRYPTO_ERR_PADDING;
+		return res;
 
 	/* Note: EMSA-PSS encoding is over the length of N - 1 bits */
 	msb = n_bits - 1;
@@ -928,7 +940,7 @@ RK_RES rsa_padding_add_pss_type(uint16_t key_len, uint16_t n_bits,
 	*p++ = 0xBC;
 
 exit:
-	return res ? RK_CRYPTO_ERR_PADDING : RK_CRYPTO_SUCCESS;
+	return res;
 }
 
 /*
@@ -957,13 +969,17 @@ RK_RES rk_rsa_padding_check_pss_type(uint16_t key_len, uint16_t n_bits,
 
 	siglen = key_len;
 
-	if (siglen < 16)
+	if (siglen < 16) {
+		res = RK_CRYPTO_ERR_PADDING;
 		goto error;
+	}
 
 	p = buf;
 
-	if (buf[siglen - 1] != 0xBC)
+	if (buf[siglen - 1] != 0xBC) {
+		res = RK_CRYPTO_ERR_PADDING;
 		goto error;
+	}
 
 	hlen = hash_len;
 	slen = siglen - hlen - 1; /* Currently length of salt + padding */
@@ -980,8 +996,10 @@ RK_RES rk_rsa_padding_check_pss_type(uint16_t key_len, uint16_t n_bits,
 		p++;
 		siglen -= 1;
 	}
-	if (buf[0] >> (8 - siglen * 8 + msb))
+	if (buf[0] >> (8 - siglen * 8 + msb)) {
+		res = RK_CRYPTO_ERR_PADDING;
 		goto error;
+	}
 
 	res = mgf_mask(p, siglen - hlen - 1, p + siglen - hlen - 1, hlen, hash_algo, hash_len);
 	if (res)
@@ -992,8 +1010,10 @@ RK_RES rk_rsa_padding_check_pss_type(uint16_t key_len, uint16_t n_bits,
 	while (p < buf + siglen && *p == 0)
 		p++;
 
-	if (p == buf + siglen || *p++ != 0x01)
+	if (p == buf + siglen || *p++ != 0x01) {
+		res = RK_CRYPTO_ERR_PADDING;
 		goto error;
+	}
 
 	/* Actual salt len */
 	slen -= p - buf;
@@ -1318,7 +1338,7 @@ RK_RES rk_rsa_sign_do_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_len
 	} else {
 		res = calc_padding_digest(hash_algo, data, data_len, tmp_hash);
 		if (res)
-			return RK_CRYPTO_ERR_PADDING;
+			return res;
 	}
 
 	switch (padding) {
@@ -1367,7 +1387,7 @@ RK_RES rk_rsa_sign_undo_padding(enum RK_RSA_SIGN_PADDING padding, uint16_t key_l
 	} else {
 		res = calc_padding_digest(hash_algo, data, data_len, tmp_hash);
 		if (res)
-			return RK_CRYPTO_ERR_PADDING;
+			goto exit;
 	}
 
 	pad = malloc(key_len);
