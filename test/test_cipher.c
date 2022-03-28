@@ -248,7 +248,7 @@ static RK_RES test_cipher_item_fd(const struct test_cipher_item *item, int verbo
 	rk_handle cipher_hdl = 0;
 	rk_cipher_config cipher_cfg;
 	rk_crypto_mem *plain = NULL, *cipher_soft = NULL, *cipher_hard = NULL;
-	uint32_t algo = 0, mode = 0, key_len, iv_len, operation;
+	uint32_t algo = 0, mode = 0, key_len = 0, iv_len, operation;
 	uint8_t iv_tmp[AES_BLOCK_SIZE];
 
 	plain = rk_crypto_mem_alloc(data_len);
@@ -363,7 +363,7 @@ exit:
 	rk_crypto_mem_free(cipher_soft);
 	rk_crypto_mem_free(cipher_hard);
 
-	if (res)
+	if (res && key_len)
 		printf("dma_fd:\t[%s-%u]\t%s\t%s\tFAIL\n",
 		       test_algo_name(algo), key_len * 8,
 		       test_mode_name(mode), test_op_name(operation));

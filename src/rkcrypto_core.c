@@ -691,6 +691,8 @@ static RK_RES rk_rsa_crypt_common(void *key, uint16_t flag, uint16_t op,
 
 	CHECK_CRYPTO_INITED();
 
+	RK_CRYPTO_CHECK_PARAM(!key);
+
 	asn1_key = malloc(asn1_key_len);
 	if (!asn1_key) {
 		E_TRACE("ioctl cryptodev_fd failed!");
