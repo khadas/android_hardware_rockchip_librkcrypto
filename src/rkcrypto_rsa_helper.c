@@ -14,10 +14,6 @@
 #endif
 
 #define RSA_PKCS1_TYPE_MIN_PAD_LEN	(11)
-#define RSA_BITS_1024			1024
-#define RSA_BITS_2048			2048
-#define RSA_BITS_3072			3072
-#define RSA_BITS_4096			4096
 
 /**< Identifier for RSA signature operations. */
 #define MBEDTLS_RSA_SIGN		1

@@ -72,7 +72,11 @@ typedef uint32_t rk_handle;
 #define MAX_TDES_KEY_SIZE		24
 #define MAX_AES_KEY_SIZE		32
 
-#define MAX_RSA_KEY_BITS		4096
+#define RSA_BITS_1024			1024
+#define RSA_BITS_2048			2048
+#define RSA_BITS_3072			3072
+#define RSA_BITS_4096			4096
+#define MAX_RSA_KEY_BITS		RSA_BITS_4096
 
 #define RK_CRYPTO_MAX_DATA_LEN		(1 * 1024 * 1024)
 
