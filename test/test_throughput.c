@@ -10,7 +10,9 @@
 #include "rkcrypto_core.h"
 #include "rkcrypto_mem.h"
 #include "rkcrypto_otp_key.h"
+#include "rkcrypto_random.h"
 #include "test_utils.h"
+#include "rsa_key_data.h"
 
 #define TEST_BLOCK_SIZE		1024 * 1024	/* 1MB */
 #define TEST_OTP_BLOCK_SIZE	500 * 1024
@@ -667,6 +669,138 @@ out:
 	return 0;
 }
 
+static int test_rsa_item_tp(uint32_t nbits)
+{
+	uint8_t *data_plain = NULL, *data_enc = NULL, *data_dec = NULL;
+	uint32_t nbytes = nbits / 8;
+	rk_rsa_pub_key_pack pub_key;
+	rk_rsa_priv_key_pack priv_key;
+	struct timespec t1, t2, t3;
+	uint64_t priv_cost, pub_cost;
+	uint32_t out_len = 0;
+	RK_RES res;
+
+	data_plain = malloc(nbytes);
+	if (!data_plain) {
+		printf("malloc data_plain %uByte error!\n", nbytes);
+		res = RK_CRYPTO_ERR_OUT_OF_MEMORY;
+		goto exit;
+	}
+
+	data_enc = malloc(nbytes);
+	if (!data_enc) {
+		printf("malloc data_enc %uByte error!\n", nbytes);
+		res = RK_CRYPTO_ERR_OUT_OF_MEMORY;
+		goto exit;
+	}
+
+	data_dec = malloc(nbytes);
+	if (!data_dec) {
+		printf("malloc data_dec %uByte error!\n", nbytes);
+		res = RK_CRYPTO_ERR_OUT_OF_MEMORY;
+		goto exit;
+	}
+
+	res = rk_get_random(data_plain, nbytes);
+	if (res) {
+		printf("failed to get random data.");
+		goto exit;
+	}
+
+	/* make sure data_plain is less than n */
+	data_plain[0] = 0x00;
+
+	memset(data_enc, 0x00, nbytes);
+
+	test_init_pubkey(&pub_key, nbits);
+	test_init_privkey(&priv_key, nbits);
+
+	clock_gettime(CLOCK_REALTIME, &t1);
+
+	res = rk_rsa_priv_encrypt(&priv_key, RK_RSA_CRYPT_PADDING_NONE,
+				  data_plain, nbytes, data_enc, &out_len);
+	if (res) {
+		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED)
+			printf("rk_rsa_priv_encrypt failed %x\n", res);
+		goto exit;
+	}
+
+	clock_gettime(CLOCK_REALTIME, &t2);
+
+	res = rk_rsa_pub_decrypt(&pub_key, RK_RSA_CRYPT_PADDING_NONE,
+				 data_enc, out_len, data_dec, &out_len);
+	if (res) {
+		printf("rk_rsa_pub_decrypt failed %x\n", res);
+		goto exit;
+	}
+
+	clock_gettime(CLOCK_REALTIME, &t3);
+
+	if (nbytes != out_len || memcmp(data_dec, data_plain, nbytes)) {
+		printf("rk_rsa_pub_decrypt compare failed\n");
+		test_dump_hex("result", data_dec, out_len);
+		test_dump_hex("expect", data_plain, nbytes);
+		goto exit;
+	}
+
+	priv_cost = (t2.tv_sec - t1.tv_sec) * 1000000000 +
+		    (t2.tv_nsec - t1.tv_nsec);
+
+	pub_cost = (t3.tv_sec - t2.tv_sec) * 1000000000 +
+		   (t3.tv_nsec - t2.tv_nsec);
+
+
+	printf("virt:\t[RSA-%u]\tPRIV\tENCRYPT\t%lums.\n",
+	       nbits, (unsigned long)(priv_cost / 1000000));
+
+	printf("virt:\t[RSA-%u]\tPUB\tDECRYPT\t%lums.\n",
+	       nbits, (unsigned long)(pub_cost / 1000000));
+
+exit:
+	if (data_plain)
+		free(data_plain);
+
+	if (data_enc)
+		free(data_enc);
+
+	if (data_dec)
+		free(data_dec);
+
+	return (res == RK_CRYPTO_SUCCESS) ? 0 : -1;
+}
+
+static int test_rsa_tp(void)
+{
+	int res;
+	uint32_t i;
+	uint32_t rsa_bits_tbl[] = {
+		RSA_BITS_1024,
+		RSA_BITS_2048,
+		RSA_BITS_3072,
+		RSA_BITS_4096,
+	};
+
+	if (rk_crypto_init()) {
+		printf("rk_crypto_init error!\n");
+		return -1;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(rsa_bits_tbl); i++) {
+		res = test_rsa_item_tp(rsa_bits_tbl[i]);
+		if (res) {
+			printf("test rsa-%u throughput FAIL.\n\n", rsa_bits_tbl[i]);
+			goto out;
+		}
+	}
+
+	printf("test rsa throughput SUCCESS.\n\n");
+
+out:
+	rk_crypto_deinit();
+
+	return 0;
+}
+
 RK_RES test_throughput(void)
 {
 	if (test_otp_key_tp())
@@ -677,6 +811,9 @@ RK_RES test_throughput(void)
 
 	if (test_hash_tp())
 		printf("Test hash throughput FAILED.\n\n");
+
+	if (test_rsa_tp())
+		printf("Test rsa throughput FAILED.\n\n");
 
 	printf("Test throughput SUCCESS.\n");
 
