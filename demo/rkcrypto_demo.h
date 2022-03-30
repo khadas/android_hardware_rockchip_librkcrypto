@@ -18,4 +18,6 @@ RK_RES demo_hash_virt(void);
 RK_RES demo_hmac(void);
 RK_RES demo_hmac_virt(void);
 
+RK_RES demo_rsa(void);
+
 #endif /*_RKCRYPTO_DEMO_H_*/
