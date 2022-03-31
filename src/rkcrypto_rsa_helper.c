@@ -189,8 +189,12 @@ static RK_RES rsa_padding_add_pkcs1_type(uint16_t key_len, uint8_t bt,
 
 	if (in_len > key_len - RSA_PKCS1_TYPE_MIN_PAD_LEN) {
 		E_TRACE("key_len is invalid.\n");
-		return RK_CRYPTO_ERR_PADDING;
+		return RK_CRYPTO_ERR_PADDING_OVERFLOW;
 	}
+
+	/* block type 0 first input data can't be zero */
+	if (bt == 0x00 && *in == 0)
+		return RK_CRYPTO_ERR_PADDING;
 
 	peb = out;
 
@@ -344,7 +348,7 @@ RK_RES rsa_padding_add_pkcs15_type(uint16_t key_len, bool is_priv_key,
 
 	/* first comparison checks for overflow */
 	if (in_len + 11 < in_len || olen < in_len + 11)
-		return RK_CRYPTO_ERR_PADDING;
+		return RK_CRYPTO_ERR_PADDING_OVERFLOW;
 
 	nb_pad = olen - 3 - in_len;
 
@@ -608,7 +612,7 @@ static RK_RES rsa_padding_add_oaep_type(enum RK_RSA_CRYPT_PADDING padding, uint1
 
 	/* first comparison checks for overflow */
 	if (in_len + 2 * hlen + 2 < in_len || olen < in_len + 2 * hlen + 2) {
-		res = RK_CRYPTO_ERR_PADDING;
+		res = RK_CRYPTO_ERR_PADDING_OVERFLOW;
 		goto error;
 	}
 

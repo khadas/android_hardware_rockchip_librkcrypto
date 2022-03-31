@@ -38,6 +38,7 @@ typedef uint32_t rk_handle;
 #define RK_CRYPTO_ERR_KEY		0xF0000009
 #define RK_CRYPTO_ERR_VERIFY		0xF000000A
 #define RK_CRYPTO_ERR_PADDING		0xF000000B
+#define RK_CRYPTO_ERR_PADDING_OVERFLOW	0xF000000C
 
 /* Algorithm operation */
 #define RK_OP_CIPHER_ENC		1
