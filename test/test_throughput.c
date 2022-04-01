@@ -740,6 +740,7 @@ static int test_rsa_item_tp(uint32_t nbits)
 		printf("rk_rsa_pub_decrypt compare failed\n");
 		test_dump_hex("result", data_dec, out_len);
 		test_dump_hex("expect", data_plain, nbytes);
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 

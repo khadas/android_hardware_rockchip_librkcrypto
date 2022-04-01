@@ -657,6 +657,8 @@ static RK_RES test_rsa_pub_enc(uint32_t padding, const char *padding_name,
 			printf("rk_rsa_pub_encrypt not match openssl_decrypt\n");
 			test_dump_hex("result", dec_buf, out_len);
 			test_dump_hex("expect", data, data_len);
+			res = RK_CRYPTO_ERR_GENERIC;
+			goto exit;
 		}
 
 		res = openssl_encrypt(data, data_len, enc_buf, &out_len,
@@ -677,6 +679,7 @@ static RK_RES test_rsa_pub_enc(uint32_t padding, const char *padding_name,
 		printf("rk_rsa_priv_decrypt compare failed\n");
 		test_dump_hex("result", enc_buf, out_len);
 		test_dump_hex("expect", data, data_len);
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -760,6 +763,7 @@ static RK_RES test_rsa_priv_enc(uint32_t padding, const char *padding_name,
 		printf("rk_rsa_pub_decrypt compare failed\n");
 		test_dump_hex("result", enc_buf, out_len);
 		test_dump_hex("expect", data, data_len);
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 

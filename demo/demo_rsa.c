@@ -172,6 +172,7 @@ static RK_RES demo_rsa_pub_enc(void)
 
 	if (sizeof(plain) != out_len || memcmp(dec_buf, plain, out_len)) {
 		printf("rk_rsa_priv_decrypt compare failed\n");
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
@@ -247,6 +248,7 @@ RK_RES demo_rsa_priv_enc(void)
 
 	if (sizeof(plain) != out_len || memcmp(dec_buf, plain, out_len)) {
 		printf("rk_rsa_pub_decrypt compare failed\n");
+		res = RK_CRYPTO_ERR_GENERIC;
 		goto exit;
 	}
 
