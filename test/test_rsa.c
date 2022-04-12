@@ -255,11 +255,12 @@ static void openssl_free_evpkey(EVP_PKEY *evp_key)
 		EVP_PKEY_free(evp_key);
 }
 
-static RK_RES openssl_encrypt(const uint8_t *in, uint32_t in_len, uint8_t *out, size_t *out_len,
+static RK_RES openssl_encrypt(const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len,
 			      int padding, const EVP_MD *digest_algorithm,
 			      rk_rsa_priv_key_pack *priv)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+	size_t tmp_len;
 	EVP_PKEY *evp_key = NULL;
 	EVP_PKEY_CTX *pkey_ctx = NULL;
 
@@ -295,14 +296,16 @@ static RK_RES openssl_encrypt(const uint8_t *in, uint32_t in_len, uint8_t *out, 
 		}
 	}
 
-	if (EVP_PKEY_encrypt(pkey_ctx, NULL /* out */, out_len, in, in_len) <= 0) {
+	if (EVP_PKEY_encrypt(pkey_ctx, NULL /* out */, &tmp_len, in, in_len) <= 0) {
 		printf("EVP_PKEY_encrypt err\n");
 		goto exit;
 	}
-	if (EVP_PKEY_encrypt(pkey_ctx, out, out_len, in, in_len) <= 0) {
+	if (EVP_PKEY_encrypt(pkey_ctx, out, &tmp_len, in, in_len) <= 0) {
 		printf("EVP_PKEY_encrypt err\n");
 		goto exit;
 	}
+
+	*out_len = (uint32_t)tmp_len;
 
 	res = RK_CRYPTO_SUCCESS;
 exit:
@@ -315,11 +318,12 @@ exit:
 	return res;
 }
 
-static RK_RES openssl_decrypt(const uint8_t *in, uint32_t in_len, uint8_t *out, size_t *out_len,
+static RK_RES openssl_decrypt(const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len,
 			      int padding, const EVP_MD *digest_algorithm,
 			      rk_rsa_priv_key_pack *priv)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+	size_t tmp_len;
 	EVP_PKEY *evp_key = NULL;
 	EVP_PKEY_CTX *pkey_ctx = NULL;
 
@@ -357,14 +361,16 @@ static RK_RES openssl_decrypt(const uint8_t *in, uint32_t in_len, uint8_t *out, 
 		}
 	}
 
-	if (EVP_PKEY_decrypt(pkey_ctx, NULL /* out */, out_len, in, in_len) <= 0) {
+	if (EVP_PKEY_decrypt(pkey_ctx, NULL /* out */, &tmp_len, in, in_len) <= 0) {
 		printf("EVP_PKEY_decrypt err\n");
 		goto exit;
 	}
-	if (EVP_PKEY_decrypt(pkey_ctx, out, out_len, in, in_len) <= 0) {
+	if (EVP_PKEY_decrypt(pkey_ctx, out, &tmp_len, in, in_len) <= 0) {
 		printf("EVP_PKEY_decrypt err\n");
 		goto exit;
 	}
+
+	*out_len = (uint32_t)tmp_len;
 
 	res = RK_CRYPTO_SUCCESS;
 exit:
@@ -377,10 +383,11 @@ exit:
 	return res;
 }
 
-static RK_RES openssl_sign(const uint8_t *in, uint32_t in_len, uint8_t *out, size_t *out_len,
+static RK_RES openssl_sign(const uint8_t *in, uint32_t in_len, uint8_t *out, uint32_t *out_len,
 			   int padding, const EVP_MD *digest_algorithm, rk_rsa_priv_key_pack *priv)
 {
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
+	size_t tmp_len = *out_len;
 	EVP_PKEY_CTX *pkey_ctx;
 	EVP_PKEY *evp_key = NULL;
 	EVP_MD_CTX *digest_ctx = NULL;
@@ -422,15 +429,16 @@ static RK_RES openssl_sign(const uint8_t *in, uint32_t in_len, uint8_t *out, siz
 		printf("EVP_DigestSignUpdate err\n");
 		goto exit;
 	}
-	if (EVP_DigestSignFinal(digest_ctx, NULL, out_len) != 1) {
+	if (EVP_DigestSignFinal(digest_ctx, NULL, &tmp_len) != 1) {
 		printf("EVP_DigestSignFinal err\n");
 		goto exit;
 	}
-	if (EVP_DigestSignFinal(digest_ctx, out, out_len) <= 0) {
+	if (EVP_DigestSignFinal(digest_ctx, out, &tmp_len) <= 0) {
 		printf("EVP_DigestSignFinal err\n");
 		goto exit;
 	}
 
+	*out_len = (uint32_t)tmp_len;
 	res = RK_CRYPTO_SUCCESS;
 exit:
 	if (res)
@@ -813,7 +821,19 @@ static RK_RES test_rsa_sign_common(uint32_t padding, const char *padding_name,
 
 	res = rk_rsa_sign(&priv_key, padding, in, in_len, hash, sign, &sign_len);
 	if (res) {
-		printf("rk_rsa_sign failed %x\n", res);
+		if (res != RK_CRYPTO_ERR_NOT_SUPPORTED &&
+		    res != RK_CRYPTO_ERR_PADDING_OVERFLOW)
+			printf("rk_rsa_sign failed %x\n", res);
+		else {
+			res = RK_CRYPTO_SUCCESS;
+
+			if (verbose) {
+				printf("******** %-20s %u\t%-16s test N/A  !!! ********\n",
+				       "test_rsa_sign_data", nbits, padding_name);
+				printf("******** %-20s %u\t%-16s test N/A  !!! ********\n",
+				       "test_rsa_sign_digest", nbits, padding_name);
+			}
+		}
 		goto exit;
 	}
 

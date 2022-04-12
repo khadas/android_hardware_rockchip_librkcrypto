@@ -780,7 +780,7 @@ static int rsa_padding_add_pkcs15_sign_type(uint32_t hash_algo, uint16_t key_len
 	if (8 + hash_len + oid_size >= 0x80 ||
 	    10 + hash_len < hash_len ||
 	    10 + hash_len + oid_size < 10 + hash_len)
-		return RK_CRYPTO_ERR_PADDING;
+		return RK_CRYPTO_ERR_PADDING_OVERFLOW;
 
 	/*
 	 * Static bounds check:
@@ -791,7 +791,7 @@ static int rsa_padding_add_pkcs15_sign_type(uint32_t hash_algo, uint16_t key_len
 	 * - Need oid_size bytes for hash alg OID.
 	 */
 	if (nb_pad < 10 + hash_len + oid_size)
-		return RK_CRYPTO_ERR_PADDING;
+		return RK_CRYPTO_ERR_PADDING_OVERFLOW;
 
 	nb_pad -= 10 + hash_len + oid_size;
 
@@ -799,7 +799,7 @@ static int rsa_padding_add_pkcs15_sign_type(uint32_t hash_algo, uint16_t key_len
 	 * and 8 bytes for the minimal padding
 	 */
 	if (nb_pad < 3 + 8)
-		return RK_CRYPTO_ERR_PADDING;
+		return RK_CRYPTO_ERR_PADDING_OVERFLOW;
 
 	nb_pad -= 3;
 
@@ -857,7 +857,7 @@ RK_RES rsa_padding_add_pss_type(uint16_t key_len, uint16_t n_bits,
 	uint8_t salt[SHA512_HASH_SIZE];
 	uint32_t slen, hlen, min_slen, offset = 0;
 	RK_RES res;
-	uint32_t msb;
+	uint32_t msb, ps_len;
 	rk_hash_config hash_cfg;
 	rk_handle hash_hdl;
 
@@ -874,11 +874,19 @@ RK_RES rsa_padding_add_pss_type(uint16_t key_len, uint16_t n_bits,
 	 */
 	min_slen = hlen - 2;
 	if (olen < hlen + min_slen + 2)
-		return RK_CRYPTO_ERR_PADDING;
+		return RK_CRYPTO_ERR_PADDING_OVERFLOW;
 	else if (olen >= hlen + hlen + 2)
 		slen = hlen;
 	else
 		slen = olen - hlen - 2;
+
+	if (olen < hlen * 2 + 2)
+		return RK_CRYPTO_ERR_PADDING_OVERFLOW;
+
+	ps_len = olen - hlen * 2 - 2;
+
+	if (olen < ps_len + 1 + slen + hlen)
+		return RK_CRYPTO_ERR_PADDING_OVERFLOW;
 
 	memset(out, 0, olen);
 
@@ -889,7 +897,7 @@ RK_RES rsa_padding_add_pss_type(uint16_t key_len, uint16_t n_bits,
 
 	/* Note: EMSA-PSS encoding is over the length of N - 1 bits */
 	msb = n_bits - 1;
-	p += olen - hlen * 2 - 2;
+	p += ps_len;
 	*p++ = 0x01;
 	memcpy(p, salt, slen);
 	p += slen;
