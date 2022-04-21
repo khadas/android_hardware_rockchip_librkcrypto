@@ -379,10 +379,14 @@ RK_RES rk_oem_otp_key_cipher(enum RK_OEM_OTP_KEYID key_id, rk_cipher_config *con
 		return res;
 	}
 
-	res = rk_crypto_fd_ioctl(RIOCCRYPT_FD_MAP, &dst_mop);
-	if (res != RK_CRYPTO_SUCCESS) {
-		E_TRACE("RIOCCRYPT_FD_MAP failed, res= 0x%x", res);
-		goto out;
+	if (out_fd != in_fd) {
+		res = rk_crypto_fd_ioctl(RIOCCRYPT_FD_MAP, &dst_mop);
+		if (res != RK_CRYPTO_SUCCESS) {
+			E_TRACE("RIOCCRYPT_FD_MAP failed, res= 0x%x", res);
+			goto out;
+		}
+	} else {
+		dst_mop.phys_addr = src_mop.phys_addr;
 	}
 
 	res = TEEC_InitializeContext(NULL, &contex);
@@ -426,7 +430,9 @@ out2:
 
 out1:
 	res = tee_to_crypto_code(res);
-	rk_crypto_fd_ioctl(RIOCCRYPT_FD_UNMAP, &dst_mop);
+
+	if (out_fd != in_fd)
+		rk_crypto_fd_ioctl(RIOCCRYPT_FD_UNMAP, &dst_mop);
 
 out:
 	rk_crypto_fd_ioctl(RIOCCRYPT_FD_UNMAP, &src_mop);
