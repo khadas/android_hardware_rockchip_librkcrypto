@@ -863,7 +863,8 @@ static RK_RES test_rsa_sign_common(uint32_t padding, const char *padding_name,
 		goto exit;
 	}
 
-	*sign = 0xaa;
+	/* modify sign data to make it wrong */
+	*sign += 1;
 	res = rk_rsa_verify(&pub_key, padding, in, in_len, hash, sign, sign_len);
 	if (res != RK_CRYPTO_ERR_VERIFY) {
 		printf("rk_rsa_verify should be RK_CRYPTO_ERR_VERIFY but %x\n", res);
