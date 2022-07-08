@@ -188,7 +188,6 @@ static struct mem_pool_node *crypto_alloc_node_dma_heap(int dma_node_fd, uint32_
 		.len = size,
 		.fd_flags = O_CLOEXEC | O_RDWR,
 	};
-	struct drm_rockchip_gem_map_off map_req;
 
 	/* cma must alloc at least two page */
 	min_size = 2 * getpagesize();
@@ -199,7 +198,6 @@ static struct mem_pool_node *crypto_alloc_node_dma_heap(int dma_node_fd, uint32_
 		return NULL;
 
 	memset(node, 0x00, sizeof(*node));
-	memset(&map_req, 0x00, sizeof(map_req));
 
 	req.fd = 0;
 	ret = ioctl(dma_node_fd, DMA_HEAP_IOCTL_ALLOC, &req);
@@ -220,8 +218,8 @@ static struct mem_pool_node *crypto_alloc_node_dma_heap(int dma_node_fd, uint32_
 	node->mem.vaddr = mmap(0, req.len, PROT_READ | PROT_WRITE, MAP_SHARED, req.fd, 0);
 #endif
 	if (node->mem.vaddr == MAP_FAILED) {
-		E_TRACE("failed to mmap buffer. offset = %"PRIu64", reason: %s\n",
-			map_req.offset, strerror(errno));
+		E_TRACE("failed to mmap buffer. fd = %"PRIu64", reason: %s\n",
+			req.fd, strerror(errno));
 		ret = -1;
 		goto error;
 	}
