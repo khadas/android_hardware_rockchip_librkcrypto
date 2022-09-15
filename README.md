@@ -13,7 +13,7 @@ librkcrypto依赖于kernel crypto驱动实现，驱动开发和应用API开发�
 ```bash
 # 以linux平台64位为例
 $ strings /lib64/librkcrypto.so |grep api |grep version
-rkcrypto api version 1.1.0
+rkcrypto api version 1.2.0
 ```
 
 - **日志打印**
@@ -21,16 +21,30 @@ rkcrypto api version 1.1.0
 当每个进程首次调用librkcrypto时，会打印版本号
 
 ```bash
-RKCRYPTO I[rk_crypto_init, 262]: rkcrypto api version 1.1.0
+RKCRYPTO I[rk_crypto_init, 262]: rkcrypto api version 1.2.0
 ```
 
 ## 适用芯片平台
 
-RK3588 | RK356x | RV1109 | RV1126
+RK3588 | RK356x | RV1109 | RV1126 | RK3326/PX30 | RK3308 | RV1106/03
 
 部分API不适用于部分芯片平台，详见应用开发说明文档。
 
 ## 版本依赖
+
+### V1.2.0
+
+kernel-4.19 需更新至以下提交：
+
+```shell
+c255a0aa097a crypto: rockchip: rk3326/px30 add aes gcm support
+```
+
+kernel-5.10 需更新至以下提交：
+
+```shell
+47e85085826d crypto: rockchip: rk3326/px30 add aes gcm support
+```
 
 ### V1.1.0
 
