@@ -24,7 +24,7 @@ static int xor(unsigned char *a, unsigned char *b,unsigned char *c)
 static int rk_aes_cbc_mac_encrypt(const unsigned char *in, unsigned long length,unsigned char *out,
 		const RK_AES_KEY *ks1, const int enc)
 {
-	int i = 0;
+	unsigned long i = 0;
 	int ret = 0;
 	unsigned char tmp[16];
 	memset(out, 0x00, 16);

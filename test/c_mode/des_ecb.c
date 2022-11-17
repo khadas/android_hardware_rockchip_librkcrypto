@@ -6,10 +6,10 @@
 
 static int rk_crypto_ecb128_encrypt(void *ctx, const unsigned char *in, unsigned long length, unsigned char *out,block128_f block)
 {
-	int i = 0;
+	unsigned long i = 0;
 	
-	for(i=0; i<length/DES_BLOCK_SIZE; i++){
-		(*block)(in+i*DES_BLOCK_SIZE, out+i*DES_BLOCK_SIZE, ctx);
+	for (i = 0; i < length / DES_BLOCK_SIZE; i++){
+		(*block)(in + i * DES_BLOCK_SIZE, out + i * DES_BLOCK_SIZE, ctx);
 	};
 	return 0;
 }

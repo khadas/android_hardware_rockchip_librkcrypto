@@ -32,7 +32,8 @@ struct test_stress_item test_stress_tbl[] = {
 
 void stress_test(int test_cnt)
 {
-	int i, j;
+	int i;
+	uint32_t j;
 	int verbose = 0;
 	RK_RES res;
 	uint32_t tbl_len = ARRAY_SIZE(test_stress_tbl);

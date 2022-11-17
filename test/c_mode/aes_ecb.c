@@ -9,7 +9,7 @@
 static int rk_crypto_ecb128_encrypt(const unsigned char *in, unsigned long length, unsigned char *out,
 		const RK_AES_KEY *ks, const int enc)
 {
-	int i = 0;
+	unsigned long i = 0;
 	
 	for(i=0; i<length/16; i++){
 		if (enc)

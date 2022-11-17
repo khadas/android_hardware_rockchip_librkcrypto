@@ -145,6 +145,7 @@ void test_write_otp_key(void)
 static int test_otp_key_item_virt(uint32_t key_id, const struct test_otp_key_item *item)
 {
 	int res = 0;
+	RK_RES rk_res;
 	uint32_t i, j, k;
 	uint8_t *key = NULL;
 	rk_cipher_config cipher_cfg;
@@ -225,23 +226,24 @@ static int test_otp_key_item_virt(uint32_t key_id, const struct test_otp_key_ite
 				cipher_cfg.key_len   = key_len;
 				cipher_cfg.reserved  = NULL;
 
-				res = rk_oem_otp_key_cipher_virt(key_id, &cipher_cfg,
+				rk_res = rk_oem_otp_key_cipher_virt(key_id, &cipher_cfg,
 								 plain, cipher_hard, data_len);
-				if (res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
+				if (rk_res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
 					printf("virt:\totpkey%d\t[%s-%u]\t%s\t%s\tN/A\n",
 					       key_id, test_algo_name(algo), key_len * 8,
 					       test_mode_name(mode), test_op_name(operation));
-					res = RK_CRYPTO_SUCCESS;
+					res = 0;
 					continue;
 				} else if (res) {
 					printf("rk_oem_otp_key_cipher_virt fail! 0x%08x\n", res);
 					goto exit;
 				}
 
-				res = soft_cipher(algo, mode, operation, key, key_len,
+				rk_res = soft_cipher(algo, mode, operation, key, key_len,
 						  cipher_cfg.iv, plain, data_len, cipher_soft);
 				if (res) {
 					printf("soft_cipher fail! 0x%08x\n", res);
+					res = -1;
 					goto exit;
 				}
 
@@ -279,6 +281,7 @@ exit:
 static int test_otp_key_item_fd(uint32_t key_id, const struct test_otp_key_item *item)
 {
 	int res = 0;
+	RK_RES rk_res;
 	uint32_t i, j, k;
 	uint8_t *key = NULL;
 	rk_cipher_config cipher_cfg;
@@ -361,24 +364,25 @@ static int test_otp_key_item_fd(uint32_t key_id, const struct test_otp_key_item 
 				cipher_cfg.key_len   = key_len;
 				cipher_cfg.reserved  = NULL;
 
-				res = rk_oem_otp_key_cipher(key_id, &cipher_cfg, plain->dma_fd,
+				rk_res = rk_oem_otp_key_cipher(key_id, &cipher_cfg, plain->dma_fd,
 							    cipher_hard->dma_fd, data_len);
-				if (res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
+				if (rk_res == RK_CRYPTO_ERR_NOT_SUPPORTED) {
 					printf("dma_fd:\totpkey%d\t[%s-%u]\t%s\t%s\tN/A\n",
 					       key_id, test_algo_name(algo), key_len * 8,
 					       test_mode_name(mode), test_op_name(operation));
-					res = RK_CRYPTO_SUCCESS;
+					res = 0;
 					continue;
 				} else if (res) {
 					printf("rk_oem_otp_key_cipher fail! 0x%08x\n", res);
 					goto exit;
 				}
 
-				res = soft_cipher(algo, mode, operation, key, key_len,
+				rk_res = soft_cipher(algo, mode, operation, key, key_len,
 						  cipher_cfg.iv, plain->vaddr, data_len,
 						  cipher_soft);
 				if (res) {
 					printf("soft_cipher fail! 0x%08x\n", res);
+					res = -1;
 					goto exit;
 				}
 
@@ -416,7 +420,7 @@ exit:
 static int test_otp_key_fd(void)
 {
 	int res;
-	int i, j;
+	uint32_t i, j;
 	uint32_t key_id;
 
 	res = rk_crypto_init();
@@ -444,7 +448,7 @@ exit:
 static int test_otp_key_virt(void)
 {
 	int res;
-	int i, j;
+	uint32_t i, j;
 	uint32_t key_id;
 
 	for (i = 0; i < ARRAY_SIZE(test_key_ids); i++) {

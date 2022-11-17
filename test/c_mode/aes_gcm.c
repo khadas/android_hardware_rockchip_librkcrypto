@@ -1468,7 +1468,7 @@ int rk_aes_gcm_encrypt(struct aes_ae_in *in, struct aes_ae_out *out, const int e
 	if (in->key_len != 16 && in->key_len != 24 && in->key_len != 32)
 		return -1;
 
-	if (in->tag_size > sizeof(tmp))
+	if (in->tag_size > 16)
 		return -1;
 
 	rk_aes_set_encrypt_key(in->key,in->key_len*8,&ks);
