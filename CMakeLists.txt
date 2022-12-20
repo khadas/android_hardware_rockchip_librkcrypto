@@ -84,7 +84,7 @@ add_subdirectory(test)
 # install public files
 ################################################################################
 install(TARGETS ${SHARED_LIB_NAME}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+        LIBRARY DESTINATION "lib"
+        PUBLIC_HEADER DESTINATION "include")
 install(TARGETS ${STATIC_LIB_NAME}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        ARCHIVE DESTINATION "lib")

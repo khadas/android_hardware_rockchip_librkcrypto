@@ -9,4 +9,4 @@ add_executable(${RKCRYPTO_TEST_NAME} ${TEST_SOURCES} ${C_MODE_SOURCES})
 
 target_link_libraries(librkcrypto_test rkcrypto)
 
-install(TARGETS ${RKCRYPTO_TEST_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS ${RKCRYPTO_TEST_NAME} RUNTIME DESTINATION "bin")
