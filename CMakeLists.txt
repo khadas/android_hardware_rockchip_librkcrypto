@@ -32,6 +32,13 @@ endif(NOT CMAKE_BUILD_TYPE)
 ################################################################################
 # librkcrypto files
 ################################################################################
+set(RKCRYPTO_PUBLIC_HEADER
+	include/rkcrypto_otp_key.h
+	include/rkcrypto_common.h
+	include/rkcrypto_core.h
+	include/rkcrypto_mem.h
+)
+
 include_directories(include)
 file(GLOB SOURCES "src/*.c")
 
@@ -56,15 +63,28 @@ file(GLOB SOURCES_TEEC
 ################################################################################
 # build librkcrypto shared library
 ################################################################################
-add_library(rkcrypto SHARED ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
+set(SHARED_LIB_NAME rkcrypto)
+
+add_library(${SHARED_LIB_NAME} SHARED ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
+set_target_properties(${SHARED_LIB_NAME} PROPERTIES PUBLIC_HEADER "${RKCRYPTO_PUBLIC_HEADER}")
 
 ################################################################################
 # build librkcrypto static library
 ################################################################################
-add_library(rkcrypto_static STATIC ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
-SET_TARGET_PROPERTIES (rkcrypto_static PROPERTIES OUTPUT_NAME "rkcrypto")
+set(STATIC_LIB_NAME ${SHARED_LIB_NAME}_static)
+add_library(${STATIC_LIB_NAME} STATIC ${SOURCES} ${SOURCES_DRM} ${SOURCES_TEEC})
+set_target_properties(${STATIC_LIB_NAME} PROPERTIES OUTPUT_NAME ${SHARED_LIB_NAME})
 
 ################################################################################
 # build other components
 ################################################################################
 add_subdirectory(test)
+
+################################################################################
+# install public files
+################################################################################
+install(TARGETS ${SHARED_LIB_NAME}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(TARGETS ${STATIC_LIB_NAME}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
