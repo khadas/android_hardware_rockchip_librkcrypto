@@ -69,8 +69,7 @@ static int test_otp_key_item_tp(bool is_virt, uint32_t key_id, uint32_t key_len,
 				       test_algo_name(algo), key_len * 8, test_mode_name(mode),
 				       test_op_name(operation));
 
-			res = RK_CRYPTO_SUCCESS;
-			continue;
+			return RK_CRYPTO_SUCCESS;
 		} else if (res) {
 			printf("test rk_oem_otp_key_cipher failed! 0x%08x\n", res);
 			return res;
