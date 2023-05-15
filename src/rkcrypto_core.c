@@ -232,6 +232,7 @@ static RK_RES rk_add_sess_node(uint32_t sess_id, uint32_t config_type, const voi
 		memcpy(&node->config.hash, config, sizeof(node->config.hash));
 		break;
 	default:
+		free(node);
 		return RK_CRYPTO_ERR_PARAMETER;
 	}
 
@@ -279,13 +280,14 @@ static void *rk_get_sess_config(uint32_t sess_id)
 
 static RK_RES rk_del_sess_node(uint32_t sess_id)
 {
-	struct list_head *pos, *n = NULL;
-	struct sess_id_node *node;
+	struct list_head *pos = NULL, *n = NULL;
 	RK_RES res = RK_CRYPTO_ERR_GENERIC;
 
 	pthread_mutex_lock(&sess_mutex);
 
 	list_for_each_safe(pos, n, &sess_id_list) {
+		struct sess_id_node *node;
+
 		node = list_entry(pos, struct sess_id_node, list);
 
 		if (node->sess_id == sess_id) {
@@ -427,12 +429,13 @@ void rk_crypto_deinit(void)
 {
 	if (--cryptodev_refcnt == 0 && cryptodev_fd >= 0) {
 		/* free sess_id list */
-		struct sess_id_node *node;
-		struct list_head *pos, *n;
+		struct list_head *pos = NULL, *n = NULL;
 
 		pthread_mutex_lock(&sess_mutex);
 
 		list_for_each_safe(pos, n, &sess_id_list) {
+			struct sess_id_node *node;
+
 			node = list_entry(pos, struct sess_id_node, list);
 			list_del(pos);
 			free(node);
@@ -984,8 +987,7 @@ static RK_RES rk_rsa_crypt_common(void *key, uint16_t flag, uint16_t op,
 exit:
 	memset(asn1_key, 0x00, asn1_key_len);
 
-	if (asn1_key)
-		free(asn1_key);
+	free(asn1_key);
 
 	return res;
 }

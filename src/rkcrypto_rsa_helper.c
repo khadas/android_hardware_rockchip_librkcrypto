@@ -74,7 +74,7 @@ static RK_RES get_oid_by_md(uint32_t hash_algo, const uint8_t **oid, uint32_t *o
 
 static RK_RES asn1_compose_len(uint32_t len, uint8_t *field, uint32_t *field_len)
 {
-	uint8_t tmp_field[4], i, j;
+	uint8_t tmp_field[4];
 
 	if (field == NULL || field_len == NULL)
 		return RK_CRYPTO_ERR_PARAMETER;
@@ -83,6 +83,8 @@ static RK_RES asn1_compose_len(uint32_t len, uint8_t *field, uint32_t *field_len
 		*field     = len;
 		*field_len = 1;
 	} else {
+		uint32_t i, j;
+
 		tmp_field[0] = (len >> 24) & 0xff;
 		tmp_field[1] = (len >> 16) & 0xff;
 		tmp_field[2] = (len >> 8) & 0xff;
@@ -185,7 +187,6 @@ static RK_RES rsa_padding_add_pkcs1_type(uint16_t key_len, uint8_t bt,
 {
 	uint32_t plen = 0;
 	uint8_t *peb = NULL;
-	uint32_t i = 0;
 
 	if (in_len > key_len - RSA_PKCS1_TYPE_MIN_PAD_LEN) {
 		E_TRACE("key_len is invalid.\n");
@@ -219,6 +220,7 @@ static RK_RES rsa_padding_add_pkcs1_type(uint16_t key_len, uint8_t bt,
 	}
 	case 0x02: {
 		RK_RES res;
+		uint32_t i = 0;
 
 		/* for block type 02, they shall be pseudorandomly generated and nonzero. */
 		res = rk_get_random(peb, plen);

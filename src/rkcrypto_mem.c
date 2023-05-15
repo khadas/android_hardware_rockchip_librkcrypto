@@ -310,7 +310,7 @@ void rk_crypto_mem_deinit(void)
 {
 	/* free list */
 	struct mem_pool_node *node;
-	struct list_head *pos, *n;
+	struct list_head *pos = NULL, *n = NULL;
 
 	pthread_mutex_lock(&dma_mutex);
 
@@ -362,7 +362,7 @@ error:
 void rk_crypto_mem_free(rk_crypto_mem *memory)
 {
 	struct mem_pool_node *node;
-	struct list_head *pos, *n;
+	struct list_head *pos = NULL, *n = NULL;
 
 	pthread_mutex_lock(&dma_mutex);
 

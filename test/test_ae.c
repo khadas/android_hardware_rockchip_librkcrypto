@@ -50,22 +50,22 @@ static RK_RES test_ae_item_virt(const struct test_ae_item *item, int verbose)
 	size_t page_size = getpagesize();
 
 	if (posix_memalign((void *)&plain, page_size, TEST_DATA_MAX) || !plain) {
-		printf("plain malloc %uByte error!\n", TEST_DATA_MAX);
+		printf("plain malloc %dByte error!\n", TEST_DATA_MAX);
 		goto exit;
 	}
 
 	if (posix_memalign((void *)&ae_soft, page_size, TEST_DATA_MAX) || !ae_soft) {
-		printf("ae_soft malloc %uByte error!\n", TEST_DATA_MAX);
+		printf("ae_soft malloc %dByte error!\n", TEST_DATA_MAX);
 		goto exit;
 	}
 
 	if (posix_memalign((void *)&ae_hard, page_size, TEST_DATA_MAX) || !ae_hard) {
-		printf("ae_hard malloc %uByte error!\n", TEST_DATA_MAX);
+		printf("ae_hard malloc %dByte error!\n", TEST_DATA_MAX);
 		goto exit;
 	}
 
 	if (posix_memalign((void *)&aad, page_size, TEST_AAD_MAX) || !aad) {
-		printf("aad malloc %uByte error!\n", TEST_AAD_MAX);
+		printf("aad malloc %dByte error!\n", TEST_AAD_MAX);
 		goto exit;
 	}
 
@@ -267,25 +267,25 @@ static RK_RES test_ae_item_fd(const struct test_ae_item *item, int verbose)
 
 	plain = rk_crypto_mem_alloc(TEST_DATA_MAX);
 	if (!plain) {
-		printf("plain malloc %uByte error!\n", TEST_DATA_MAX);
+		printf("plain malloc %dByte error!\n", TEST_DATA_MAX);
 		goto exit;
 	}
 
 	ae_soft = rk_crypto_mem_alloc(TEST_DATA_MAX);
 	if (!ae_soft) {
-		printf("ae_soft malloc %uByte error!\n", TEST_DATA_MAX);
+		printf("ae_soft malloc %dByte error!\n", TEST_DATA_MAX);
 		goto exit;
 	}
 
 	ae_hard = rk_crypto_mem_alloc(TEST_DATA_MAX);
 	if (!ae_hard) {
-		printf("ae_hard malloc %uByte error!\n", TEST_DATA_MAX);
+		printf("ae_hard malloc %dByte error!\n", TEST_DATA_MAX);
 		goto exit;
 	}
 
 	aad = rk_crypto_mem_alloc(TEST_AAD_MAX);
 	if (!aad) {
-		printf("aad malloc %uByte error!\n", TEST_AAD_MAX);
+		printf("aad malloc %dByte error!\n", TEST_AAD_MAX);
 		goto exit;
 	}
 

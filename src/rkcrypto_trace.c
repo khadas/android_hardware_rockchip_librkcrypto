@@ -69,15 +69,15 @@ RK_RES rkcrypto_set_trace_level(enum RKCRYPTO_TRACE_LEVEL level)
 
 void trace_printf(int level, const char *function, int line, const char *fmt, ...)
 {
-	char buffer[512];
-	int i;
-	va_list args;
-
 	rkcrypto_get_trace_level();
 
 	if (level > trace_level) {
 		return;
 	} else {
+		int i;
+		char buffer[512];
+		va_list args;
+
 		va_start(args, fmt);
 
 #ifdef ANDROID
@@ -156,15 +156,15 @@ void trace_printf(int level, const char *function, int line, const char *fmt, ..
 void hex_dump(int level, const char *function, int line, const char *buffer_name,
 	      const void *buffer, int len)
 {
-	int i, j, line_count;
-	char ch[4], tmp[64];
-	char *in = (char *)buffer;
-
 	trace_printf(level, function, line, "%s(%d): ", buffer_name, len);
 
 	if (level > trace_level) {
 		return;
 	} else {
+		int i, j, line_count;
+		char ch[4], tmp[64];
+		char *in = (char *)buffer;
+
 		line_count = len / 16;
 		line_count = len % 16 ? line_count + 1 : line_count;
 
